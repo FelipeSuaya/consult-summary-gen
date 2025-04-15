@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ConsultationRecord } from "@/types";
 import { useQuery } from "@tanstack/react-query";
@@ -12,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { updateConsultation } from "@/lib/storage";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import React from "react";
 
 interface PatientConsultationsProps {
   patientId: string;

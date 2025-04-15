@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { groqApi } from "@/lib/api";
 import { BookOpen, Save, RotateCcw, Check } from "lucide-react";
 
+// Define the Prompt interface to match the database schema
 interface Prompt {
   id: string;
   name: string;
@@ -39,6 +40,7 @@ const PromptManager = () => {
   const fetchPrompts = async () => {
     setIsLoading(true);
     try {
+      // Cast the result to the Prompt type to satisfy TypeScript
       const { data, error } = await supabase
         .from('prompts')
         .select('*')
@@ -49,10 +51,10 @@ const PromptManager = () => {
       }
 
       if (data) {
-        setPrompts(data);
+        setPrompts(data as Prompt[]);
         if (data.length > 0 && !selectedPrompt) {
-          setSelectedPrompt(data[0]);
-          setEditedContent(data[0].content);
+          setSelectedPrompt(data[0] as Prompt);
+          setEditedContent((data[0] as Prompt).content);
         }
       }
     } catch (error) {

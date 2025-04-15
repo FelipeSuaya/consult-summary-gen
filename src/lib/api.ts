@@ -1,5 +1,16 @@
+
 import { ApiResponse } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
+
+// Define the Prompt interface to match the database schema
+interface Prompt {
+  id: string;
+  name: string;
+  content: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 // Esta clase usará la API key compartida desde Supabase
 export class GroqApiService {
@@ -116,6 +127,7 @@ export class GroqApiService {
     }
     
     try {
+      // Using type assertion to tell TypeScript about the structure
       const { data, error } = await supabase
         .from('prompts')
         .select('content')
