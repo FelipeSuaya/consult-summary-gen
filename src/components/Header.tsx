@@ -13,26 +13,31 @@ const Header = () => {
   const { user, logout } = useAuth();
 
   useEffect(() => {
-    // Verificar si hay una clave API almacenada
-    const storedApiKey = localStorage.getItem("groqApiKey");
-    if (storedApiKey) {
-      groqApi.setApiKey(storedApiKey);
-      setHasApiKey(true);
-    } else {
-      // Si no se encuentra la clave API en localStorage, intentar obtener la compartida
-      const fetchSharedKey = async () => {
-        const sharedKey = await groqApi.fetchSharedApiKey();
-        if (sharedKey) {
-          groqApi.setApiKey(sharedKey);
+    const initializeApiKey = async () => {
+      // Primero intentar obtener la clave API compartida
+      const sharedKey = await groqApi.fetchSharedApiKey();
+      
+      if (sharedKey) {
+        console.log("Using shared API key from database");
+        groqApi.setApiKey(sharedKey);
+        setHasApiKey(true);
+      } else {
+        // Si no hay clave compartida, verificar si hay una en localStorage como respaldo
+        const storedApiKey = localStorage.getItem("groqApiKey");
+        if (storedApiKey) {
+          console.log("Using API key from localStorage");
+          groqApi.setApiKey(storedApiKey);
           setHasApiKey(true);
-        } else {
+        } else if (user) {
+          // Si no hay clave en ningún lado, abrir el diálogo para configurarla
+          console.log("No API key found, opening dialog");
           setApiDialogOpen(true);
         }
-      };
-      
-      if (user) {
-        fetchSharedKey();
       }
+    };
+    
+    if (user) {
+      initializeApiKey();
     }
   }, [user]);
 

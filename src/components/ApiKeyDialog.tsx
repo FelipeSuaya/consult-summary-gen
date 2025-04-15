@@ -21,15 +21,35 @@ const ApiKeyDialog = ({ open, onOpenChange }: ApiKeyDialogProps) => {
 
   useEffect(() => {
     const checkAdminStatus = async () => {
-      // Aquí podrías implementar una lógica para determinar si el usuario es administrador
-      // Por simplicidad, vamos a permitir que solo el primer usuario registrado pueda cambiar la API key
-      const { count } = await supabase
-        .from('user_profiles')
-        .select('*', { count: 'exact', head: true });
-      
-      // El primer usuario o si no hay usuarios aún será considerado admin
-      if (count === 1 || count === 0) {
-        setIsAdmin(true);
+      try {
+        // Obtener el total de usuarios
+        const { count, error } = await supabase
+          .from('user_profiles')
+          .select('*', { count: 'exact', head: true });
+          
+        if (error) {
+          console.error("Error checking admin status:", error);
+          return;
+        }
+        
+        // Obtener el ID del usuario actual
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        
+        // El primer usuario registrado o el usuario con ID específico es admin
+        const { data: userProfile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .single();
+          
+        // El usuario es admin si es el primero que se registró
+        if (userProfile && (userProfile.id === user.id || count === 1)) {
+          setIsAdmin(true);
+        }
+      } catch (error) {
+        console.error("Error checking admin status:", error);
       }
     };
     
@@ -63,13 +83,36 @@ const ApiKeyDialog = ({ open, onOpenChange }: ApiKeyDialogProps) => {
     try {
       // Si el usuario es administrador, actualizar la clave API compartida
       if (isAdmin) {
-        const { error } = await supabase
+        // Verificar si ya existe un registro para 'groq'
+        const { data, error: checkError } = await supabase
           .from('shared_api_keys')
-          .update({ api_key: apiKey.trim() })
-          .eq('service_name', 'groq');
+          .select('*')
+          .eq('service_name', 'groq')
+          .maybeSingle();
+          
+        if (checkError) {
+          throw new Error(checkError.message);
+        }
         
-        if (error) {
-          throw new Error(error.message);
+        let upsertError;
+        
+        if (data) {
+          // Actualizar el registro existente
+          const { error } = await supabase
+            .from('shared_api_keys')
+            .update({ api_key: apiKey.trim() })
+            .eq('service_name', 'groq');
+          upsertError = error;
+        } else {
+          // Insertar un nuevo registro
+          const { error } = await supabase
+            .from('shared_api_keys')
+            .insert({ service_name: 'groq', api_key: apiKey.trim() });
+          upsertError = error;
+        }
+        
+        if (upsertError) {
+          throw new Error(upsertError.message);
         }
       }
       
@@ -87,7 +130,7 @@ const ApiKeyDialog = ({ open, onOpenChange }: ApiKeyDialogProps) => {
     } catch (error) {
       toast({
         title: "Error",
-        description: "No se pudo guardar la clave API",
+        description: "No se pudo guardar la clave API: " + (error instanceof Error ? error.message : "Error desconocido"),
         variant: "destructive",
       });
     } finally {
