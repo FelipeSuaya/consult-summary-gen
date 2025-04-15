@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import AudioRecorder from "@/components/AudioRecorder";
@@ -9,7 +8,6 @@ import { ConsultationRecord, Patient } from "@/types";
 import { groqApi } from "@/lib/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ensureConsultationAudiosBucket } from "@/lib/ensureStorageBucket";
-import { ensureSharedApiKeysTable } from "@/lib/ensureSharedApiKeys";
 import { useToast } from "@/components/ui/use-toast";
 
 const Index = () => {
@@ -18,37 +16,28 @@ const Index = () => {
   const [showNewConsultation, setShowNewConsultation] = useState(false);
   const [activeTab, setActiveTab] = useState("consultas");
   const [selectedPatientForConsultation, setSelectedPatientForConsultation] = useState<Patient | null>(null);
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
 
   useEffect(() => {
-    const initializeApp = async () => {
-      // Ensure the shared API keys table exists
-      const apiKeysResult = await ensureSharedApiKeysTable();
-      if (apiKeysResult.error) {
-        console.error("Error ensuring shared API keys table:", apiKeysResult.error);
-      }
-      
-      // Ensure the storage bucket exists
-      const bucketResult = await ensureConsultationAudiosBucket();
-      if (bucketResult.error) {
-        console.error("Error setting up storage bucket:", bucketResult.error);
+    const storedApiKey = localStorage.getItem("groqApiKey");
+    if (storedApiKey) {
+      groqApi.setApiKey(storedApiKey);
+    }
+
+    ensureConsultationAudiosBucket().then(() => {
+      console.log("Storage bucket check completed successfully");
+    }).catch(error => {
+      console.error("Error setting up storage bucket:", error);
+      if (error && typeof error === 'object' && 'message' in error) {
         toast({
           title: "Error de configuración",
           description: "No se pudo inicializar completamente el almacenamiento.",
           variant: "destructive"
         });
       }
-      
-      // Try to get shared API key if not already set
-      if (!groqApi.hasApiKey()) {
-        const sharedKey = await groqApi.fetchSharedApiKey();
-        if (sharedKey) {
-          groqApi.setApiKey(sharedKey);
-        }
-      }
-    };
-    
-    initializeApp();
+    });
   }, [toast]);
 
   const handleRecordingComplete = (consultation: ConsultationRecord) => {
