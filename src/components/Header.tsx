@@ -14,25 +14,25 @@ const Header = () => {
 
   useEffect(() => {
     const initializeApiKey = async () => {
-      try {
-        // Primero intentar obtener la clave API compartida
-        const sharedKey = await groqApi.fetchSharedApiKey();
-        
-        if (sharedKey) {
-          console.log("Using shared API key from database");
-          groqApi.setApiKey(sharedKey);
+      // Primero intentar obtener la clave API compartida
+      const sharedKey = await groqApi.fetchSharedApiKey();
+      
+      if (sharedKey) {
+        console.log("Using shared API key from database");
+        groqApi.setApiKey(sharedKey);
+        setHasApiKey(true);
+      } else {
+        // Si no hay clave compartida, verificar si hay una en localStorage como respaldo
+        const storedApiKey = localStorage.getItem("groqApiKey");
+        if (storedApiKey) {
+          console.log("Using API key from localStorage");
+          groqApi.setApiKey(storedApiKey);
           setHasApiKey(true);
-        } else {
-          // Si no hay clave compartida, verificar si hay una en localStorage como respaldo
-          const storedApiKey = localStorage.getItem("groqApiKey");
-          if (storedApiKey) {
-            console.log("Using API key from localStorage");
-            groqApi.setApiKey(storedApiKey);
-            setHasApiKey(true);
-          }
+        } else if (user) {
+          // Si no hay clave en ningún lado, abrir el diálogo para configurarla
+          console.log("No API key found, opening dialog");
+          setApiDialogOpen(true);
         }
-      } catch (error) {
-        console.error("Error initializing API key:", error);
       }
     };
     
@@ -60,12 +60,10 @@ const Header = () => {
         <div className="flex items-center gap-2">
           {user ? (
             <>
-              {!hasApiKey && (
-                <Button variant="ghost" size="sm" onClick={() => setApiDialogOpen(true)}>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Configurar API manualmente
-                </Button>
-              )}
+              <Button variant="ghost" size="sm" onClick={() => setApiDialogOpen(true)}>
+                <Settings className="h-4 w-4 mr-2" />
+                {hasApiKey ? "API Configurada" : "Configurar API"}
+              </Button>
               
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
