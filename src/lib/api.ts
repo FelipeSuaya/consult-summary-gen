@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 export class GroqApiService {
   private apiKey: string | null = null;
   private baseUrl = "https://api.groq.com/openai/v1";
+  private cachedSystemPrompt: string | null = null;
   
   // Dictionary of common medical term corrections
   private medicalTermCorrections: Record<string, string> = {
@@ -107,6 +108,39 @@ export class GroqApiService {
     return correctedText;
   }
 
+  // Get the system prompt from the database
+  async getSystemPrompt(): Promise<string> {
+    // Return cached prompt if available
+    if (this.cachedSystemPrompt) {
+      return this.cachedSystemPrompt;
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('prompts')
+        .select('content')
+        .eq('name', 'transcription_summary')
+        .eq('active', true)
+        .single();
+
+      if (error) {
+        console.error("Error al obtener el prompt:", error);
+        throw error;
+      }
+
+      if (data?.content) {
+        this.cachedSystemPrompt = data.content;
+        return data.content;
+      } else {
+        throw new Error("No se encontró el prompt en la base de datos");
+      }
+    } catch (error) {
+      console.error("Error al cargar el prompt de sistema:", error);
+      // Fallback to default prompt if there's an error
+      return "Eres un asistente médico especializado. Extrae y resume la información clave de la consulta médica.";
+    }
+  }
+
   async fetchSharedApiKey(): Promise<string | null> {
     try {
       const { data, error } = await supabase
@@ -200,6 +234,9 @@ export class GroqApiService {
       // Apply medical term correction to the transcription before sending to LLM
       const correctedTranscription = this.correctMedicalTerms(transcription);
       
+      // Get the system prompt from the database
+      const systemPrompt = await this.getSystemPrompt();
+      
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: "POST",
         headers: {
@@ -211,7 +248,7 @@ export class GroqApiService {
           messages: [
             {
               role: "system",
-              content: "Eres un asistente médico especializado. Extrae y resume la información clave de la siguiente transcripción de consulta médica, utilizando terminología médica técnica y profesional. IMPORTANTE: Incluye SIEMPRE los siguientes datos personales del paciente si están mencionados: nombre completo, DNI, teléfono, correo electrónico, edad, domicilio, género, escolaridad, ocupación, obra social y procedencia.\n\nEstructura el resumen con las siguientes secciones EXACTAMENTE en este orden:\n\n1. DATOS PERSONALES: Todos los datos de identificación mencionados.\n\n2. MOTIVO DE CONSULTA: Razón principal por la que el paciente acude a la consulta médica, expresada de forma concisa y técnica.\n\n3. ANTECEDENTES PERSONALES: Incluye enfermedades del adulto, internaciones previas, antecedentes traumáticos, quirúrgicos, alérgicos, medicación habitual y vacunación.\n\n4. ANTECEDENTES FAMILIARES: Patologías relevantes en familiares de primer y segundo grado.\n\n5. HÁBITOS: Tabaquismo (paq/año), alcoholismo (g/día), otras sustancias si se mencionan.\n\n6. EXÁMENES COMPLEMENTARIOS PREVIOS: Resultados de estudios anteriores que el paciente mencione, incluyendo:\n   - Laboratorio: Presenta los valores de análisis de sangre, orina u otros estudios de laboratorio en formato de tabla cuando sea posible, por ejemplo:\n     | Parámetro | Resultado | Valor referencia |\n     | --------- | --------- | --------------- |\n     | Glucemia | 100 mg/dl | 70-110 mg/dl |\n   - Otros estudios: Radiografías, ecografías, tomografías, resonancias, etc.\n\n7. DIAGNÓSTICO PRESUNTIVO: Impresión diagnóstica basada en la anamnesis y examen físico, utilizando nomenclatura médica precisa.\n\n8. INDICACIONES: Plan terapéutico detallado, incluyendo medicación, posología y recomendaciones.\n\n9. EXÁMENES SOLICITADOS: Estudios complementarios indicados durante la consulta.\n\nUsa terminología médica técnica en todo el resumen. Sé preciso y conciso, evitando redundancias, pero asegurando que toda la información clínica relevante quede documentada. Siempre que menciones resultados de laboratorio, preséntalo en formato de tabla."
+              content: systemPrompt
             },
             {
               role: "user",
@@ -273,6 +310,11 @@ export class GroqApiService {
     if (emailMatch) data.email = emailMatch[0];
     
     return data;
+  }
+  
+  // Reset the cached prompt to force a refresh from the database
+  resetCachedPrompt(): void {
+    this.cachedSystemPrompt = null;
   }
 }
 

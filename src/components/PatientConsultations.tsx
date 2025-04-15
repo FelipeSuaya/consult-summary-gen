@@ -70,22 +70,41 @@ const renderMarkdownTable = (markdownTable: string) => {
 const processTextWithTables = (text: string) => {
   if (!text) return null;
   
+  const tablePattern = /(\|\s*[\w\s]+\s*\|\s*[\w\s]+\s*\|[\s\S]*?\n\s*\|[\s\-]+\|[\s\-]+\|[\s\S]*?(?=\n\s*\n|\n\s*[A-ZÁÉÍÓÚÑ]|$))/g;
   const sectionPattern = /\n([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ\s]+):\s*\n/g;
-  const sections = text.split(sectionPattern);
   
-  if (sections.length <= 1) {
-    return <div className="whitespace-pre-line">{text}</div>;
+  const sectionsWithTables = text.split(sectionPattern);
+  
+  if (sectionsWithTables.length <= 1) {
+    const tablesMatch = text.match(tablePattern);
+    if (tablesMatch) {
+      let processedText = text;
+      tablesMatch.forEach(tableText => {
+        processedText = processedText.replace(tableText, `<table-placeholder-${Math.random()}>`);
+      });
+      
+      return <div className="whitespace-pre-line">
+        {processedText.split(/<table-placeholder-[^>]+>/).map((textPart, i) => (
+          <React.Fragment key={`text-${i}`}>
+            {textPart}
+            {i < tablesMatch.length && renderMarkdownTable(tablesMatch[i])}
+          </React.Fragment>
+        ))}
+      </div>;
+    } else {
+      return <div className="whitespace-pre-line">{text}</div>;
+    }
   }
   
   let result: React.ReactNode[] = [];
-  if (sections[0].trim()) {
-    result.push(<div key="intro" className="mb-3">{sections[0]}</div>);
+  if (sectionsWithTables[0].trim()) {
+    result.push(<div key="intro" className="mb-3">{sectionsWithTables[0]}</div>);
   }
   
-  for (let i = 1; i < sections.length; i += 2) {
-    if (i + 1 < sections.length) {
-      const sectionTitle = sections[i].trim();
-      const sectionContent = sections[i + 1].trim();
+  for (let i = 1; i < sectionsWithTables.length; i += 2) {
+    if (i + 1 < sectionsWithTables.length) {
+      const sectionTitle = sectionsWithTables[i].trim();
+      const sectionContent = sectionsWithTables[i + 1].trim();
       
       let icon;
       switch (sectionTitle.toLowerCase().replace(/[áéíóúñ]/g, char => {
@@ -94,9 +113,6 @@ const processTextWithTables = (text: string) => {
         case "datos personales":
           icon = <Users className="h-4 w-4" />;
           break;
-        case "motivo de consulta":
-          icon = <FileText className="h-4 w-4" />;
-          break;
         case "laboratorio":
           icon = <TestTube className="h-4 w-4" />;
           break;
@@ -104,7 +120,16 @@ const processTextWithTables = (text: string) => {
           icon = <FileText className="h-4 w-4" />;
       }
       
-      if (sectionContent.includes('|') && sectionContent.split('\n').filter(line => line.includes('|')).length >= 2) {
+      const tablesInSection = sectionContent.match(tablePattern);
+      
+      if (tablesInSection) {
+        let processedContent = sectionContent;
+        tablesInSection.forEach(tableText => {
+          processedContent = processedContent.replace(tableText, `<table-placeholder-${Math.random()}>`);
+        });
+        
+        const contentParts = processedContent.split(/<table-placeholder-[^>]+>/);
+        
         result.push(
           <div key={`section-${i}`} className="mb-4">
             <div className="mb-2 flex items-center gap-2 bg-medical-100/50 p-2 rounded-md">
@@ -113,7 +138,14 @@ const processTextWithTables = (text: string) => {
               </div>
               <h3 className="font-semibold text-medical-800">{sectionTitle}</h3>
             </div>
-            <div className="pl-2 overflow-x-auto">{renderMarkdownTable(sectionContent)}</div>
+            <div className="pl-2">
+              {contentParts.map((textPart, j) => (
+                <React.Fragment key={`part-${i}-${j}`}>
+                  {textPart && <div className="whitespace-pre-line mb-2">{textPart}</div>}
+                  {j < tablesInSection.length && renderMarkdownTable(tablesInSection[j])}
+                </React.Fragment>
+              ))}
+            </div>
           </div>
         );
       } else {

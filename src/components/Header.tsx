@@ -1,15 +1,18 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Settings, MicOff, User, LogOut } from "lucide-react";
+import { Settings, MicOff, User, LogOut, BookOpen } from "lucide-react";
 import ApiKeyDialog from "./ApiKeyDialog";
 import { groqApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import PromptManager from "./PromptManager";
 
 const Header = () => {
   const [apiDialogOpen, setApiDialogOpen] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
+  const [promptManagerOpen, setPromptManagerOpen] = useState(false);
   const { user, logout } = useAuth();
 
   useEffect(() => {
@@ -48,13 +51,25 @@ const Header = () => {
     <header className="sticky top-0 z-10 border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
       <div className="container flex h-16 items-center justify-between py-4">
         <div className="flex items-center gap-2">
-          <MicOff className="h-6 w-6 text-medical-600" />
-          <h1 className="text-xl font-medium tracking-tight text-medical-900">ConsultSummary</h1>
+          <Link to="/" className="flex items-center gap-2">
+            <MicOff className="h-6 w-6 text-medical-600" />
+            <h1 className="text-xl font-medium tracking-tight text-medical-900">ConsultSummary</h1>
+          </Link>
         </div>
         
         <div className="flex items-center gap-2">
           {user ? (
             <>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setPromptManagerOpen(true)}
+                className="text-medical-600 hover:text-medical-800 hover:bg-medical-50"
+              >
+                <BookOpen className="h-4 w-4 mr-2" />
+                Prompts
+              </Button>
+              
               <Button variant="ghost" size="sm" onClick={() => setApiDialogOpen(true)}>
                 <Settings className="h-4 w-4 mr-2" />
                 {hasApiKey ? "API Configurada" : "Configurar API"}
@@ -76,6 +91,15 @@ const Header = () => {
         </div>
         
         <ApiKeyDialog open={apiDialogOpen} onOpenChange={setApiDialogOpen} />
+        
+        <Dialog open={promptManagerOpen} onOpenChange={setPromptManagerOpen}>
+          <DialogContent className="max-w-4xl w-[95%] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Administrador de Prompts</DialogTitle>
+            </DialogHeader>
+            <PromptManager />
+          </DialogContent>
+        </Dialog>
       </div>
     </header>
   );
