@@ -22,41 +22,47 @@ const Index = () => {
 
   useEffect(() => {
     const initializeApp = async () => {
-      // Ensure the shared API keys table exists
-      const apiKeysResult = await ensureSharedApiKeysTable();
-      if (apiKeysResult.error) {
-        console.error("Error ensuring shared API keys table:", apiKeysResult.error);
-      }
-      
-      // Configure Groq API key automatically
-      const setupResult = await setupGroqApiKey();
-      if (setupResult.error) {
-        console.error("Error setting up Groq API key:", setupResult.error);
-        toast({
-          title: "Error de configuración",
-          description: "No se pudo configurar automáticamente la API de Groq.",
-          variant: "destructive"
-        });
-      } else {
-        console.log("Groq API configured automatically");
-      }
-      
-      // Ensure the storage bucket exists
-      const bucketResult = await ensureConsultationAudiosBucket();
-      if (bucketResult.error) {
-        console.error("Error setting up storage bucket:", bucketResult.error);
-        toast({
-          title: "Error de configuración",
-          description: "No se pudo inicializar completamente el almacenamiento.",
-          variant: "destructive"
-        });
-      }
-      
-      // Try to get shared API key and set it in the groqApi service
-      const sharedKey = await groqApi.fetchSharedApiKey();
-      if (sharedKey) {
-        groqApi.setApiKey(sharedKey);
-        console.log("Using shared Groq API key automatically");
+      try {
+        // Ensure the shared API keys table exists
+        const apiKeysResult = await ensureSharedApiKeysTable();
+        if (apiKeysResult.error) {
+          console.error("Error ensuring shared API keys table:", apiKeysResult.error);
+        }
+        
+        // Configure Groq API key automatically
+        const setupResult = await setupGroqApiKey();
+        if (setupResult.error) {
+          console.error("Error setting up Groq API key:", setupResult.error);
+          toast({
+            title: "Error de configuración",
+            description: "No se pudo configurar automáticamente la API de Groq.",
+            variant: "destructive"
+          });
+        } else {
+          console.log("Groq API configured automatically");
+        }
+        
+        // Ensure the storage bucket exists
+        const bucketResult = await ensureConsultationAudiosBucket();
+        if (bucketResult.error) {
+          console.error("Error setting up storage bucket:", bucketResult.error);
+          toast({
+            title: "Error de configuración",
+            description: "No se pudo inicializar completamente el almacenamiento.",
+            variant: "destructive"
+          });
+        }
+        
+        // Try to get shared API key and set it in the groqApi service
+        const sharedKey = await groqApi.fetchSharedApiKey();
+        if (sharedKey) {
+          groqApi.setApiKey(sharedKey);
+          console.log("Using shared Groq API key automatically");
+        } else {
+          console.error("No shared API key found");
+        }
+      } catch (error) {
+        console.error("Error initializing app:", error);
       }
     };
     
