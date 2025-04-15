@@ -1,18 +1,15 @@
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Settings, MicOff, User, LogOut, BookOpen } from "lucide-react";
+import { Settings, MicOff, User, LogOut } from "lucide-react";
 import ApiKeyDialog from "./ApiKeyDialog";
 import { groqApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import PromptManager from "./PromptManager";
 
 const Header = () => {
   const [apiDialogOpen, setApiDialogOpen] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
-  const [promptManagerOpen, setPromptManagerOpen] = useState(false);
   const { user, logout } = useAuth();
 
   useEffect(() => {
@@ -39,10 +36,6 @@ const Header = () => {
     }
   }, [user]);
 
-  useEffect(() => {
-    setHasApiKey(groqApi.hasApiKey());
-  }, [apiDialogOpen]);
-
   const handleLogout = async () => {
     await logout();
   };
@@ -60,16 +53,6 @@ const Header = () => {
         <div className="flex items-center gap-2">
           {user ? (
             <>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setPromptManagerOpen(true)}
-                className="text-medical-600 hover:text-medical-800 hover:bg-medical-50"
-              >
-                <BookOpen className="h-4 w-4 mr-2" />
-                Prompts
-              </Button>
-              
               <Button variant="ghost" size="sm" onClick={() => setApiDialogOpen(true)}>
                 <Settings className="h-4 w-4 mr-2" />
                 {hasApiKey ? "API Configurada" : "Configurar API"}
@@ -91,15 +74,6 @@ const Header = () => {
         </div>
         
         <ApiKeyDialog open={apiDialogOpen} onOpenChange={setApiDialogOpen} />
-        
-        <Dialog open={promptManagerOpen} onOpenChange={setPromptManagerOpen}>
-          <DialogContent className="max-w-4xl w-[95%] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Administrador de Prompts</DialogTitle>
-            </DialogHeader>
-            <PromptManager />
-          </DialogContent>
-        </Dialog>
       </div>
     </header>
   );

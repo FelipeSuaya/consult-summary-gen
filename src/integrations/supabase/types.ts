@@ -227,6 +227,33 @@ export type Database = {
         }
         Relationships: []
       }
+      prompts: {
+        Row: {
+          active: boolean
+          content: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          content: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          content?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       resumes: {
         Row: {
           created_at: string | null
