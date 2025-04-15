@@ -25,13 +25,13 @@ const Index = () => {
       try {
         // Ensure the shared API keys table exists
         const apiKeysResult = await ensureSharedApiKeysTable();
-        if (apiKeysResult.error) {
+        if (apiKeysResult && apiKeysResult.error) {
           console.error("Error ensuring shared API keys table:", apiKeysResult.error);
         }
         
         // Configure Groq API key automatically
         const setupResult = await setupGroqApiKey();
-        if (setupResult.error) {
+        if (setupResult && setupResult.error) {
           console.error("Error setting up Groq API key:", setupResult.error);
           toast({
             title: "Error de configuración",
