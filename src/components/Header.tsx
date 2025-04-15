@@ -28,11 +28,8 @@ const Header = () => {
           console.log("Using API key from localStorage");
           groqApi.setApiKey(storedApiKey);
           setHasApiKey(true);
-        } else if (user) {
-          // Si no hay clave en ningún lado, abrir el diálogo para configurarla
-          console.log("No API key found, opening dialog");
-          setApiDialogOpen(true);
         }
+        // No abrimos el diálogo automáticamente para la configuración ya que ahora es automática
       }
     };
     
@@ -60,10 +57,12 @@ const Header = () => {
         <div className="flex items-center gap-2">
           {user ? (
             <>
-              <Button variant="ghost" size="sm" onClick={() => setApiDialogOpen(true)}>
-                <Settings className="h-4 w-4 mr-2" />
-                {hasApiKey ? "API Configurada" : "Configurar API"}
-              </Button>
+              {!hasApiKey && (
+                <Button variant="ghost" size="sm" onClick={() => setApiDialogOpen(true)}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Configurar API manualmente
+                </Button>
+              )}
               
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />

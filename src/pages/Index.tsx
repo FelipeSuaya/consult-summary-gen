@@ -9,7 +9,7 @@ import { ConsultationRecord, Patient } from "@/types";
 import { groqApi } from "@/lib/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ensureConsultationAudiosBucket } from "@/lib/ensureStorageBucket";
-import { ensureSharedApiKeysTable } from "@/lib/ensureSharedApiKeys";
+import { ensureSharedApiKeysTable, setupGroqApiKey } from "@/lib/ensureSharedApiKeys";
 import { useToast } from "@/components/ui/use-toast";
 
 const Index = () => {
@@ -28,6 +28,19 @@ const Index = () => {
         console.error("Error ensuring shared API keys table:", apiKeysResult.error);
       }
       
+      // Configure Groq API key automatically
+      const setupResult = await setupGroqApiKey();
+      if (setupResult.error) {
+        console.error("Error setting up Groq API key:", setupResult.error);
+        toast({
+          title: "Error de configuración",
+          description: "No se pudo configurar automáticamente la API de Groq.",
+          variant: "destructive"
+        });
+      } else {
+        console.log("Groq API configured automatically");
+      }
+      
       // Ensure the storage bucket exists
       const bucketResult = await ensureConsultationAudiosBucket();
       if (bucketResult.error) {
@@ -39,12 +52,11 @@ const Index = () => {
         });
       }
       
-      // Try to get shared API key if not already set
-      if (!groqApi.hasApiKey()) {
-        const sharedKey = await groqApi.fetchSharedApiKey();
-        if (sharedKey) {
-          groqApi.setApiKey(sharedKey);
-        }
+      // Try to get shared API key and set it in the groqApi service
+      const sharedKey = await groqApi.fetchSharedApiKey();
+      if (sharedKey) {
+        groqApi.setApiKey(sharedKey);
+        console.log("Using shared Groq API key automatically");
       }
     };
     
