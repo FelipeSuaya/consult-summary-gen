@@ -26,6 +26,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showPatientSelector, setShowPatientSelector] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<"ok" | "error" | "checking">("ok");
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -64,6 +65,30 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       setPatientName(selectedPatient.name);
     }
   }, [selectedPatient]);
+  
+  // Check if Groq API is available when the component loads
+  useEffect(() => {
+    const checkGroqConnection = async () => {
+      setConnectionStatus("checking");
+      
+      // Check if API key is available
+      if (!groqApi.hasApiKey()) {
+        // Try to get a shared key
+        const sharedKey = await groqApi.fetchSharedApiKey();
+        if (sharedKey) {
+          groqApi.setApiKey(sharedKey);
+          setConnectionStatus("ok");
+        } else {
+          setConnectionStatus("error");
+          setRecordingError("No se pudo obtener la clave API para el servicio de transcripción.");
+        }
+      } else {
+        setConnectionStatus("ok");
+      }
+    };
+    
+    checkGroqConnection();
+  }, []);
 
   const setupMediaRecorderErrorHandling = (mediaRecorder: MediaRecorder) => {
     mediaRecorder.onerror = (event: Event & { error?: Error }) => {
@@ -109,6 +134,15 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       return;
     }
 
+    if (connectionStatus === "error") {
+      toast({
+        title: "Error de Conexión",
+        description: "No se puede conectar al servicio de transcripción. Verifique su conexión a internet e intente nuevamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!groqApi.hasApiKey()) {
       toast({
         title: "API Key Requerida",
@@ -119,20 +153,44 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
     }
 
     try {
+      // Use more specific audio constraints for better compatibility
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
+          autoGainControl: true,
+          sampleRate: 48000, // Higher sample rate for better quality
+          channelCount: 1     // Mono for compatibility
         }
       });
       streamRef.current = stream;
       
-      // Specify the codec explicitly to ensure compatibility
-      const options = {
-        mimeType: 'audio/webm;codecs=opus',
-        audioBitsPerSecond: 128000
-      };
+      // Try to use a more widely supported codec
+      let options: MediaRecorderOptions;
+      
+      // Try to detect what codecs are available
+      const mimeTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+        'audio/ogg;codecs=opus',
+        'audio/wav'
+      ];
+      
+      const supportedType = mimeTypes.find(mimeType => MediaRecorder.isTypeSupported(mimeType));
+      
+      if (supportedType) {
+        console.log(`Using supported MIME type: ${supportedType}`);
+        options = {
+          mimeType: supportedType,
+          audioBitsPerSecond: 128000
+        };
+      } else {
+        console.log("No specific MIME type supported, using default");
+        options = {
+          audioBitsPerSecond: 128000
+        };
+      }
       
       const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
@@ -165,8 +223,9 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         }
         
         try {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          console.log(`Audio blob created: ${audioBlob.size} bytes`);
+          const mimeType = mediaRecorder.mimeType || 'audio/webm';
+          const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+          console.log(`Audio blob created: ${audioBlob.size} bytes with MIME type: ${mimeType}`);
           
           if (audioBlob.size === 0) {
             throw new Error("El archivo de audio está vacío");
@@ -285,7 +344,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       });
       
       // Log to verify audio blob integrity
-      console.log("Audio blob valid:", audioBlob.size > 0 && audioBlob.type === 'audio/webm');
+      console.log("Audio blob valid:", audioBlob.size > 0 && (audioBlob.type.includes('webm') || audioBlob.type.includes('mp4') || audioBlob.type.includes('ogg') || audioBlob.type.includes('wav')));
       
       // Try to fetch the shared API key if one isn't set
       if (!groqApi.hasApiKey()) {
@@ -364,10 +423,19 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       setRecordingError(null);
     } catch (error) {
       console.error("Error de procesamiento:", error);
-      setRecordingError(`Error de procesamiento: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      
+      // Special handling for network errors
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      let userFriendlyMessage = errorMessage;
+      
+      if (errorMessage.includes("Failed to fetch")) {
+        userFriendlyMessage = "No se pudo conectar con el servicio de transcripción. Verifique su conexión a internet e intente nuevamente.";
+      }
+      
+      setRecordingError(`Error de procesamiento: ${userFriendlyMessage}`);
       toast({
         title: "Error de Procesamiento",
-        description: error instanceof Error ? error.message : "No se pudo procesar la grabación",
+        description: userFriendlyMessage,
         variant: "destructive",
       });
     } finally {
@@ -421,6 +489,17 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
             </div>
           )}
           
+          {connectionStatus === "error" && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Error de conexión</AlertTitle>
+              <AlertDescription>
+                No se puede conectar con el servicio de transcripción. 
+                Verifique su conexión a internet e intente nuevamente.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           {recordingError && (
             <Alert variant="destructive" className="mt-4">
               <AlertTriangle className="h-4 w-4" />
@@ -462,7 +541,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
                 onClick={startRecording} 
                 variant="default"
                 size="lg"
-                disabled={isProcessing || !patientName.trim()}
+                disabled={isProcessing || !patientName.trim() || connectionStatus === "error"}
                 className="w-full sm:w-auto bg-medical-600 hover:bg-medical-700"
               >
                 <Mic className="mr-2 h-4 w-4" />

@@ -339,12 +339,17 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
 
   // Enhanced transcribe audio method with improved error handling and retry logic
   async transcribeAudio(audioBlob: Blob): Promise<ApiResponse> {
+    console.log("Starting transcribeAudio with Groq API");
+    
     // Si no hay API key, intentar obtenerla de Supabase
     if (!this.hasApiKey()) {
+      console.log("No API key found, attempting to fetch shared key");
       const sharedKey = await this.fetchSharedApiKey();
       if (sharedKey) {
         this.setApiKey(sharedKey);
+        console.log("Successfully fetched shared API key");
       } else {
+        console.error("Failed to obtain API key from shared keys");
         return { success: false, error: "No se pudo obtener la clave API" };
       }
     }
@@ -358,7 +363,8 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
 
       console.log("Preparing to transcribe audio:", {
         blobSize: audioBlob.size,
-        blobType: audioBlob.type
+        blobType: audioBlob.type,
+        apiKey: this.apiKey ? "Present (length: " + this.apiKey.length + ")" : "Missing"
       });
 
       const formData = new FormData();
@@ -370,7 +376,12 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
       
       // For debugging: log the content type being used
       console.log("Transcription request MIME type:", audioBlob.type);
+      console.log("Using API endpoint:", `${this.baseUrl}/audio/transcriptions`);
 
+      // Set timeout to 60 seconds for long audio files
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      
       const response = await fetch(`${this.baseUrl}/audio/transcriptions`, {
         method: "POST",
         headers: {
@@ -378,6 +389,9 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
           // No Content-Type header for FormData
         },
         body: formData,
+        signal: controller.signal
+      }).finally(() => {
+        clearTimeout(timeoutId);
       });
 
       if (!response.ok) {
@@ -415,6 +429,20 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
       return { success: true, data };
     } catch (error) {
       console.error("Error de transcripción:", error);
+      
+      // Check specifically for network errors
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido";
+      const isNetworkError = errorMessage === "Failed to fetch" || 
+                            errorMessage.includes("network") || 
+                            errorMessage.includes("cors");
+      
+      if (isNetworkError) {
+        return { 
+          success: false, 
+          error: "No se pudo conectar con el servicio de transcripción. Verifique su conexión a internet e intente nuevamente."
+        };
+      }
+      
       return { 
         success: false, 
         error: error instanceof Error 
