@@ -1,4 +1,7 @@
 
+import React from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 const renderMarkdownTable = (markdownTable: string) => {
   if (!markdownTable.includes('|')) return markdownTable;
   
@@ -52,3 +55,5 @@ const renderMarkdownTable = (markdownTable: string) => {
     return markdownTable;
   }
 };
+
+export default renderMarkdownTable;
