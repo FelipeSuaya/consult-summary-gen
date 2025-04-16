@@ -1,3 +1,4 @@
+
 import { ApiResponse } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -242,10 +243,10 @@ export class GroqApiService {
     }
 
     try {
-      // Aplicar corrección de términos médicos a la transcripción
+      // Apply medical term correction to the transcription before sending to LLM
       const correctedTranscription = this.correctMedicalTerms(transcription);
       
-      // Obtener el prompt del sistema desde la base de datos
+      // Get the system prompt from the database
       const systemPrompt = await this.getSystemPrompt();
       
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -278,21 +279,9 @@ export class GroqApiService {
 
       const data = await response.json();
       
-      // Asegurar corrección de términos médicos en la respuesta
+      // Apply any additional corrections to the summary response if needed
       if (data.choices && data.choices[0]?.message?.content) {
         data.choices[0].message.content = this.correctMedicalTerms(data.choices[0].message.content);
-        
-        // Asegurar que los gráficos de laboratorio sean generados si hay datos numéricos
-        const laboratoryPattern = /\d+(\.\d+)?\s*[a-zA-Z]+/g;
-        const laboratoryMatches = data.choices[0].message.content.match(laboratoryPattern);
-        
-        if (laboratoryMatches && laboratoryMatches.length > 0) {
-          data.choices[0].message.content += "\n\nLABORATORIO:\n| Parámetro | Valor | Referencia |\n| --- | --- | --- |\n" + 
-            laboratoryMatches.map(match => {
-              const [value, unit] = match.split(/\s+/);
-              return `| ${unit} | ${value} | Referencia pendiente |`;
-            }).join('\n');
-        }
       }
       
       return { success: true, data };
