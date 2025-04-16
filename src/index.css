@@ -5,7 +5,7 @@
 
 @layer base {
   :root {
-    --background: 214 100% 98%;
+    --background: 210 50% 98%;
     --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
@@ -14,26 +14,26 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 212 100% 55%;
+    --primary: 201 100% 45%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 214 90% 95%;
-    --secondary-foreground: 212 100% 40%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 213 100% 97%;
-    --accent-foreground: 212 100% 40%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 212 100% 55%;
+    --ring: 201 100% 45%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -55,7 +55,7 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 212 100% 55%;
+    --primary: 201 100% 45%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;
@@ -91,32 +91,16 @@
 
   body {
     @apply bg-background text-foreground;
-    background-image: 
-      radial-gradient(circle at 100% 0%, rgba(77, 167, 255, 0.05) 0%, transparent 25%),
-      radial-gradient(circle at 0% 75%, rgba(30, 136, 255, 0.05) 0%, transparent 35%);
-    background-attachment: fixed;
-  }
-
-  /* Estilos modernos para elementos comunes */
-  input, textarea, select {
-    @apply focus:shadow-inner-glow transition-shadow duration-300;
-  }
-
-  button {
-    @apply transition-all duration-300;
   }
 }
 
-/* Waveform animation styles */
 .waveform {
   width: 100%;
   height: 60px;
-  background: linear-gradient(180deg, rgba(30, 136, 255, 0.1) 0%, rgba(30, 136, 255, 0.05) 100%);
-  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(124, 202, 251, 0.2) 0%, rgba(124, 202, 251, 0.1) 100%);
+  border-radius: 8px;
   position: relative;
   overflow: hidden;
-  backdrop-filter: blur(2px);
-  border: 1px solid rgba(30, 136, 255, 0.2);
 }
 
 .waveform::before {
@@ -130,8 +114,8 @@
     90deg,
     transparent,
     transparent 2px,
-    rgba(30, 136, 255, 0.4) 2px,
-    rgba(30, 136, 255, 0.4) 3px
+    rgba(124, 202, 251, 0.5) 2px,
+    rgba(124, 202, 251, 0.5) 3px
   );
   background-size: 10px 100%;
   animation: wave 1.5s infinite linear;
@@ -144,40 +128,4 @@
   100% {
     background-position-x: 10px;
   }
-}
-
-/* Glassmorphism utility class */
-.glass {
-  @apply bg-white/30 backdrop-blur-md border border-white/20 shadow-md;
-}
-
-.medical-gradient {
-  @apply bg-gradient-to-r from-medical-600 to-medical-800;
-}
-
-.medical-card {
-  @apply bg-white border-none rounded-xl overflow-hidden shadow-neo transition-all duration-300 hover:shadow-neo-lg;
-}
-
-.glow-effect {
-  @apply after:absolute after:inset-0 after:rounded-lg after:animate-glow-pulse after:pointer-events-none after:opacity-0 hover:after:opacity-100 after:transition-opacity;
-}
-
-/* Estilos adicionales para elementos 3D */
-.neo-button {
-  @apply relative overflow-hidden bg-gradient-to-tr from-medical-500 to-medical-600 text-white rounded-lg shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-lg active:translate-y-0;
-}
-
-.neo-button::before {
-  content: '';
-  @apply absolute top-0 left-0 w-full h-full bg-white opacity-0 transition-opacity duration-300;
-}
-
-.neo-button:hover::before {
-  @apply opacity-10;
-}
-
-/* Efectos de pulso para elementos interactivos */
-.pulse-on-hover {
-  @apply transition-transform hover:scale-105 hover:shadow-glow;
 }
