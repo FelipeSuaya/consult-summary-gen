@@ -144,12 +144,165 @@ export class GroqApiService {
         this.cachedSystemPrompt = data.content;
         return data.content;
       } else {
-        throw new Error("No se encontró el prompt en la base de datos");
+        // If no prompt is found, set up the standardized prompt
+        await this.setupStandardizedPrompt();
+        return this.getSystemPrompt(); // Try again after setting up
       }
     } catch (error) {
       console.error("Error al cargar el prompt de sistema:", error);
-      // Fallback to default prompt if there's an error
-      return "Eres un asistente médico especializado. Extrae y resume la información clave de la consulta médica.";
+      
+      // If there's an error, try to set up the standardized prompt
+      try {
+        await this.setupStandardizedPrompt();
+        
+        // Try to get the prompt again
+        return this.getSystemPrompt();
+      } catch (setupError) {
+        console.error("Error al configurar el prompt estándar:", setupError);
+        
+        // Use the default standardized prompt as fallback
+        const standardizedPrompt = `Eres un asistente médico especializado en documentación clínica. A partir de la siguiente transcripción de una consulta médica, extrae y resume la información clínica relevante utilizando terminología médica técnica y profesional, siguiendo una estructura estandarizada.
+
+⚠️ IMPORTANTE: Si en la transcripción se mencionan datos personales del paciente, deben ser incluidos en su totalidad y sin omisiones:
+
+Nombre completo
+DNI
+Teléfono
+Correo electrónico
+Edad
+Domicilio
+Género
+Nivel educativo (escolaridad)
+Ocupación
+Obra social
+Procedencia
+
+🧾 ESTRUCTURA DEL RESUMEN (usa estos títulos en este orden exacto):
+
+DATOS PERSONALES: Todos los datos identificatorios mencionados.
+
+MOTIVO DE CONSULTA: Razón principal de la consulta expresada en términos técnicos y precisos.
+
+ANTECEDENTES PERSONALES: Enfermedades crónicas del adulto, internaciones previas, cirugías, alergias, antecedentes traumáticos, medicación habitual, y esquema de vacunación si se menciona.
+
+ANTECEDENTES FAMILIARES: Enfermedades relevantes en familiares de primer o segundo grado (ej. hipertensión, diabetes, cáncer, enfermedades hereditarias).
+
+HÁBITOS: Consumo de tabaco (indicar en paq/año), alcohol (indicar en g/día), otras sustancias si se mencionan.
+
+EXÁMENES COMPLEMENTARIOS PREVIOS:
+
+Laboratorio: Presentar valores relevantes en una tabla clara con las siguientes columnas:
+| Parámetro | Resultado | Valor de referencia |
+
+Otros estudios: Incluir resultados de imágenes (radiografías, ecografías, TAC, RMN, etc.) o procedimientos (endoscopías, EKG, etc.) si se mencionan.
+
+DIAGNÓSTICO PRESUNTIVO: Hipótesis diagnóstica basada en la anamnesis y examen físico, con términos médicos adecuados.
+
+INDICACIONES: Detalle del plan terapéutico (medicación, dosis, frecuencia), medidas no farmacológicas y otras recomendaciones.
+
+EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
+
+✅ Sé conciso pero completo. Evita redundancias, pero no omitas datos clínicamente significativos. Siempre que se reporten valores de laboratorio, preséntalos en formato de tabla. Usa nomenclatura médica estandarizada en todo el resumen.`;
+        
+        this.cachedSystemPrompt = standardizedPrompt;
+        return standardizedPrompt;
+      }
+    }
+  }
+
+  // Set up the standardized prompt in the database
+  private async setupStandardizedPrompt(): Promise<void> {
+    const standardizedPrompt = `Eres un asistente médico especializado en documentación clínica. A partir de la siguiente transcripción de una consulta médica, extrae y resume la información clínica relevante utilizando terminología médica técnica y profesional, siguiendo una estructura estandarizada.
+
+⚠️ IMPORTANTE: Si en la transcripción se mencionan datos personales del paciente, deben ser incluidos en su totalidad y sin omisiones:
+
+Nombre completo
+DNI
+Teléfono
+Correo electrónico
+Edad
+Domicilio
+Género
+Nivel educativo (escolaridad)
+Ocupación
+Obra social
+Procedencia
+
+🧾 ESTRUCTURA DEL RESUMEN (usa estos títulos en este orden exacto):
+
+DATOS PERSONALES: Todos los datos identificatorios mencionados.
+
+MOTIVO DE CONSULTA: Razón principal de la consulta expresada en términos técnicos y precisos.
+
+ANTECEDENTES PERSONALES: Enfermedades crónicas del adulto, internaciones previas, cirugías, alergias, antecedentes traumáticos, medicación habitual, y esquema de vacunación si se menciona.
+
+ANTECEDENTES FAMILIARES: Enfermedades relevantes en familiares de primer o segundo grado (ej. hipertensión, diabetes, cáncer, enfermedades hereditarias).
+
+HÁBITOS: Consumo de tabaco (indicar en paq/año), alcohol (indicar en g/día), otras sustancias si se mencionan.
+
+EXÁMENES COMPLEMENTARIOS PREVIOS:
+
+Laboratorio: Presentar valores relevantes en una tabla clara con las siguientes columnas:
+| Parámetro | Resultado | Valor de referencia |
+
+Otros estudios: Incluir resultados de imágenes (radiografías, ecografías, TAC, RMN, etc.) o procedimientos (endoscopías, EKG, etc.) si se mencionan.
+
+DIAGNÓSTICO PRESUNTIVO: Hipótesis diagnóstica basada en la anamnesis y examen físico, con términos médicos adecuados.
+
+INDICACIONES: Detalle del plan terapéutico (medicación, dosis, frecuencia), medidas no farmacológicas y otras recomendaciones.
+
+EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
+
+✅ Sé conciso pero completo. Evita redundancias, pero no omitas datos clínicamente significativos. Siempre que se reporten valores de laboratorio, preséntalos en formato de tabla. Usa nomenclatura médica estandarizada en todo el resumen.`;
+
+    try {
+      // Check if there's already a prompt with the same name
+      const { data, error: selectError } = await supabase
+        .from('prompts')
+        .select('id')
+        .eq('name', 'transcription_summary')
+        .single();
+
+      if (selectError && selectError.code !== 'PGRST116') {
+        console.error("Error al verificar si existe el prompt:", selectError);
+        throw selectError;
+      }
+
+      if (data) {
+        // Update the existing prompt
+        const { error: updateError } = await supabase
+          .from('prompts')
+          .update({ content: standardizedPrompt, active: true, updated_at: new Date().toISOString() })
+          .eq('id', data.id);
+
+        if (updateError) {
+          console.error("Error al actualizar el prompt existente:", updateError);
+          throw updateError;
+        }
+
+        console.log("Prompt existente actualizado con éxito");
+      } else {
+        // Create a new prompt
+        const { error: insertError } = await supabase
+          .from('prompts')
+          .insert({
+            name: 'transcription_summary',
+            content: standardizedPrompt,
+            active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+
+        if (insertError) {
+          console.error("Error al crear el nuevo prompt:", insertError);
+          throw insertError;
+        }
+
+        console.log("Nuevo prompt creado con éxito");
+      }
+    } catch (error) {
+      console.error("Error al configurar el prompt estandarizado:", error);
+      throw error;
     }
   }
 
@@ -185,7 +338,7 @@ export class GroqApiService {
     return this.apiKey !== null && this.apiKey.trim() !== '';
   }
 
-  // Transcribe audio using Whisper
+  // Enhanced transcribe audio method with improved medical term correction
   async transcribeAudio(audioBlob: Blob): Promise<ApiResponse> {
     // Si no hay API key, intentar obtenerla de Supabase
     if (!this.hasApiKey()) {
@@ -218,7 +371,7 @@ export class GroqApiService {
 
       const data = await response.json();
       
-      // Apply medical term correction to the transcription
+      // Apply comprehensive medical term correction to the transcription
       if (data.text) {
         data.text = this.correctMedicalTerms(data.text);
       }
@@ -230,7 +383,7 @@ export class GroqApiService {
     }
   }
 
-  // Generate summary using Groq's LLM
+  // Enhanced generate summary method that ensures proper structured format
   async generateSummary(transcription: string): Promise<ApiResponse> {
     // Si no hay API key, intentar obtenerla de Supabase
     if (!this.hasApiKey()) {
@@ -246,7 +399,7 @@ export class GroqApiService {
       // Apply medical term correction to the transcription before sending to LLM
       const correctedTranscription = this.correctMedicalTerms(transcription);
       
-      // Get the system prompt from the database
+      // Get the system prompt from the database - this now ensures the standardized format
       const systemPrompt = await this.getSystemPrompt();
       
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -267,8 +420,8 @@ export class GroqApiService {
               content: correctedTranscription
             }
           ],
-          temperature: 0.3,
-          max_tokens: 1024
+          temperature: 0.2, // Lower temperature for more consistent and structured output
+          max_tokens: 1500 // Increased for more comprehensive summaries
         }),
       });
 
@@ -279,9 +432,17 @@ export class GroqApiService {
 
       const data = await response.json();
       
-      // Apply any additional corrections to the summary response if needed
+      // Apply any additional corrections to the summary response and ensure lab tables are formatted correctly
       if (data.choices && data.choices[0]?.message?.content) {
-        data.choices[0].message.content = this.correctMedicalTerms(data.choices[0].message.content);
+        let summarizedContent = data.choices[0].message.content;
+        
+        // First correct any medical terms
+        summarizedContent = this.correctMedicalTerms(summarizedContent);
+        
+        // Ensure laboratory values are properly formatted as tables
+        summarizedContent = this.ensureLabResultsInTables(summarizedContent);
+        
+        data.choices[0].message.content = summarizedContent;
       }
       
       return { success: true, data };
@@ -289,6 +450,44 @@ export class GroqApiService {
       console.error("Error en la generación del resumen:", error);
       return { success: false, error: "No se pudo generar el resumen" };
     }
+  }
+  
+  // Helper method to ensure laboratory results are properly formatted as tables
+  private ensureLabResultsInTables(text: string): string {
+    // Find sections that might contain laboratory results
+    const labSections = text.match(/Laboratorio:[\s\S]*?((?=\n\n)|$)/g) || [];
+    
+    for (const section of labSections) {
+      // Skip if section already contains a table
+      if (section.includes('|')) continue;
+      
+      // Extract potential laboratory values (e.g., "Glucose: 120 mg/dl")
+      const labLines = section.split('\n').filter(line => 
+        line.match(/[a-zA-Z]+:?\s+\d+\.?\d*\s*[a-zA-Z\/]+/i)
+      );
+      
+      if (labLines.length) {
+        // Create table header
+        let tableText = '\n| Parámetro | Resultado | Valor de referencia |\n';
+        tableText += '| --------- | --------- | ------------------ |\n';
+        
+        // Add each lab result as a row
+        for (const line of labLines) {
+          const match = line.match(/([a-zA-Z\s]+):?\s+(\d+\.?\d*\s*[a-zA-Z\/]+)/i);
+          if (match) {
+            const parameter = match[1].trim();
+            const result = match[2].trim();
+            // We don't have reference values from the raw text, so leaving it empty
+            tableText += `| ${parameter} | ${result} | - |\n`;
+          }
+        }
+        
+        // Replace the lab section with the new table
+        text = text.replace(section, `Laboratorio:\n${tableText}`);
+      }
+    }
+    
+    return text;
   }
 
   // Extract patient data from the summary
