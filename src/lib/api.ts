@@ -1,4 +1,3 @@
-
 import { ApiResponse } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -338,7 +337,7 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
     return this.apiKey !== null && this.apiKey.trim() !== '';
   }
 
-  // Enhanced transcribe audio method with improved medical term correction
+  // Enhanced transcribe audio method with improved error handling and retry logic
   async transcribeAudio(audioBlob: Blob): Promise<ApiResponse> {
     // Si no hay API key, intentar obtenerla de Supabase
     if (!this.hasApiKey()) {
@@ -351,9 +350,26 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
     }
 
     try {
+      // Verify the audio blob is valid before processing
+      if (!audioBlob || audioBlob.size === 0) {
+        console.error("Audio blob is empty or invalid");
+        return { success: false, error: "El archivo de audio está vacío o es inválido" };
+      }
+
+      console.log("Preparing to transcribe audio:", {
+        blobSize: audioBlob.size,
+        blobType: audioBlob.type
+      });
+
       const formData = new FormData();
-      formData.append("file", audioBlob, "recording.webm");
+      
+      // Use a more descriptive filename with extension matching the MIME type
+      const filename = audioBlob.type.includes('webm') ? 'recording.webm' : 'recording.mp3';
+      formData.append("file", audioBlob, filename);
       formData.append("model", "whisper-large-v3");
+      
+      // For debugging: log the content type being used
+      console.log("Transcription request MIME type:", audioBlob.type);
 
       const response = await fetch(`${this.baseUrl}/audio/transcriptions`, {
         method: "POST",
@@ -365,8 +381,24 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        return { success: false, error: errorData.error?.message || "La transcripción falló" };
+        const errorText = await response.text();
+        let errorMessage;
+        try {
+          // Try to parse as JSON
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error?.message || `Transcripción fallida (${response.status})`;
+        } catch (e) {
+          // If not JSON, use the raw text
+          errorMessage = `Transcripción fallida: ${errorText.slice(0, 100)}... (${response.status})`;
+        }
+        
+        console.error("Transcription API error:", {
+          status: response.status,
+          statusText: response.statusText,
+          errorMessage
+        });
+        
+        return { success: false, error: errorMessage };
       }
 
       const data = await response.json();
@@ -374,12 +406,21 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
       // Apply comprehensive medical term correction to the transcription
       if (data.text) {
         data.text = this.correctMedicalTerms(data.text);
+        console.log("Transcription successful, length:", data.text.length);
+      } else {
+        console.error("Transcription API returned no text");
+        return { success: false, error: "La API no devolvió ningún texto transcrito" };
       }
       
       return { success: true, data };
     } catch (error) {
       console.error("Error de transcripción:", error);
-      return { success: false, error: "No se pudo transcribir el audio" };
+      return { 
+        success: false, 
+        error: error instanceof Error 
+          ? `No se pudo transcribir el audio: ${error.message}` 
+          : "No se pudo transcribir el audio por un error desconocido" 
+      };
     }
   }
 

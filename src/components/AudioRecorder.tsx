@@ -119,10 +119,22 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
       streamRef.current = stream;
       
-      const mediaRecorder = new MediaRecorder(stream, {mimeType: 'audio/webm;codecs=opus'});
+      // Specify the codec explicitly to ensure compatibility
+      const options = {
+        mimeType: 'audio/webm;codecs=opus',
+        audioBitsPerSecond: 128000
+      };
+      
+      const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
       
@@ -179,8 +191,8 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         }
       };
       
-      // Start with small data intervals to detect problems early
-      mediaRecorder.start(1000); // Collect data every second
+      // Collect data more frequently to ensure we capture everything
+      mediaRecorder.start(500); 
       setIsRecording(true);
       setRecordingTime(0);
       
@@ -271,6 +283,20 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         patientName,
         selectedPatientId: selectedPatient?.id
       });
+      
+      // Log to verify audio blob integrity
+      console.log("Audio blob valid:", audioBlob.size > 0 && audioBlob.type === 'audio/webm');
+      
+      // Try to fetch the shared API key if one isn't set
+      if (!groqApi.hasApiKey()) {
+        const sharedKey = await groqApi.fetchSharedApiKey();
+        if (sharedKey) {
+          groqApi.setApiKey(sharedKey);
+          console.log("Using shared API key for transcription");
+        } else {
+          throw new Error("No se pudo obtener una clave API válida para el proceso de transcripción");
+        }
+      }
       
       const transcriptionResponse = await groqApi.transcribeAudio(audioBlob);
       
