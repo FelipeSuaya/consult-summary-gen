@@ -18,14 +18,90 @@ interface PatientConsultationsProps {
   patientId: string;
 }
 
+const LAB_NAMES = [
+  "hematocrito", "hemoglobina", "orina", "glucosa", "colesterol",
+  "trigliceridos", "leucocitos", "eritrocitos", "plaquetas", "urea",
+  "creatinina", "transaminasas", "bilirrubina", "proteinas", "albumina",
+  "sodio", "potasio", "cloro", "calcio", "fosforo", "vsg", "hgb", "hb"
+];
+
+const getLabRowData = (rowArr: string[]) => {
+  let resultIndex = -1;
+  let studyIndex = -1;
+  let estudio = "";
+  let resultado = "";
+
+  // Busca la columna que tenga un nombre de estudio común:
+  for (let i = 0; i < rowArr.length; i++) {
+    const val = rowArr[i].toLowerCase();
+    if (LAB_NAMES.some(lab => val.includes(lab))) {
+      studyIndex = i;
+      break;
+    }
+  }
+  // fallback: si no se detecta texto reconocible, asume el primero es el estudio
+  if (studyIndex === -1) studyIndex = 0;
+
+  // Busca resultado: número, negativo, positivo, o texto significativo
+  for (let i = 0; i < rowArr.length; i++) {
+    const val = rowArr[i].toLowerCase();
+    if (
+      (/\d/.test(rowArr[i]) && i !== studyIndex) ||
+      val.includes("negativo") ||
+      val.includes("positivo") ||
+      val.match(/[\d\.,]+/)
+    ) {
+      resultIndex = i;
+      break;
+    }
+  }
+  // fallback: siguiente celda
+  if (resultIndex === -1) resultIndex = studyIndex === 0 ? 1 : 0;
+
+  estudio = rowArr[studyIndex]?.charAt(0).toUpperCase() + rowArr[studyIndex]?.slice(1);
+  resultado = rowArr[resultIndex] || "-";
+  return { estudio, resultado };
+};
+
 const renderMarkdownTable = (markdownTable: string) => {
   if (!markdownTable.includes('|')) return markdownTable;
 
   try {
-    const isLabTable = /par[aá]metro|estudio/i.test(markdownTable) && /resultado/i.test(markdownTable);
+    const isLabTable = /par[aá]metro|estudio|laboratorio/i.test(markdownTable) && /resultado/i.test(markdownTable);
 
     const rows = markdownTable.trim().split('\n');
     if (rows.length < 2) return markdownTable;
+
+    const isSeparator = rows[1].trim().replace(/[^|\-\s]/g, '') === rows[1].trim();
+    const dataStartIndex = isSeparator ? 2 : 1;
+    const dataRows = rows.slice(dataStartIndex)
+      .map(row => row.trim().split('|').map(cell => cell.trim()).filter(Boolean))
+      .filter(row => row.length > 0);
+
+    // Cuando es tabla de laboratorio, analizar filas
+    if (isLabTable) {
+      return (
+        <Table className="mt-2 mb-4 border border-gray-200">
+          <TableHeader className="bg-medical-50">
+            <TableRow>
+              <TableHead className="font-medium text-medical-800">Estudio</TableHead>
+              <TableHead className="font-medium text-medical-800">Resultado</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {dataRows.map((rowArr, idx) => {
+              const { estudio, resultado } = getLabRowData(rowArr);
+              return (
+                <TableRow key={`lab-row-${idx}`} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                  <TableCell>{estudio || "-"}</TableCell>
+                  <TableCell>{resultado || "-"}</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      );
+    }
 
     const headerRow = rows[0].trim();
     const headers = headerRow
@@ -33,71 +109,23 @@ const renderMarkdownTable = (markdownTable: string) => {
       .map(cell => cell.trim())
       .filter(cell => cell !== '');
 
-    let studyIndex = headers.findIndex(
-      h => /par[aá]metro|estudio/i.test(h)
-    );
-    let resultIndex = headers.findIndex(
-      h => /resultado/i.test(h)
-    );
-
-    if (!isLabTable || studyIndex === -1 || resultIndex === -1) {
-      const isSeparator = rows[1].trim().replace(/[^|\-\s]/g, '') === rows[1].trim();
-      const dataStartIndex = isSeparator ? 2 : 1;
-      const dataRows = rows.slice(dataStartIndex).map(row => {
-        return row
-          .trim()
-          .split('|')
-          .map(cell => cell.trim())
-          .filter(cell => cell !== '');
-      }).filter(row => row.length > 0);
-
-      return (
-        <Table className="mt-2 mb-4 border border-gray-200">
-          <TableHeader className="bg-medical-50">
-            <TableRow>
-              {headers.map((header, i) => (
-                <TableHead key={`header-${i}`} className="font-medium text-medical-800">{header}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {dataRows.map((row, rowIndex) => (
-              <TableRow key={`row-${rowIndex}`} className={rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                {row.map((cell, cellIndex) => (
-                  <TableCell key={`cell-${rowIndex}-${cellIndex}`}>{cell}</TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      );
-    }
-
-    const customHeaders = ["Estudio", "Resultado"];
-    const isSeparator = rows[1].trim().replace(/[^|\-\s]/g, '') === rows[1].trim();
-    const dataStartIndex = isSeparator ? 2 : 1;
-    const dataRows = rows.slice(dataStartIndex).map(row => {
-      return row
-        .trim()
-        .split('|')
-        .map(cell => cell.trim())
-        .filter(cell => cell !== '');
-    }).filter(row => row.length > Math.max(studyIndex, resultIndex));
+    const dataRowsGeneric = dataRows;
 
     return (
       <Table className="mt-2 mb-4 border border-gray-200">
         <TableHeader className="bg-medical-50">
           <TableRow>
-            {customHeaders.map((header, i) => (
-              <TableHead key={`lab-header-${i}`} className="font-medium text-medical-800">{header}</TableHead>
+            {headers.map((header, i) => (
+              <TableHead key={`header-${i}`} className="font-medium text-medical-800">{header}</TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {dataRows.map((row, rowIndex) => (
-            <TableRow key={`lab-row-${rowIndex}`} className={rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-              <TableCell>{row[studyIndex]}</TableCell>
-              <TableCell>{row[resultIndex]}</TableCell>
+          {dataRowsGeneric.map((row, rowIndex) => (
+            <TableRow key={`row-${rowIndex}`} className={rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+              {row.map((cell, cellIndex) => (
+                <TableCell key={`cell-${rowIndex}-${cellIndex}`}>{cell}</TableCell>
+              ))}
             </TableRow>
           ))}
         </TableBody>
