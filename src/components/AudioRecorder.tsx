@@ -26,7 +26,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showPatientSelector, setShowPatientSelector] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -35,7 +34,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   const { toast } = useToast();
 
   const MAX_RECORDING_TIME = 30 * 60; // 30 minutes in seconds
-  const MAX_RETRIES = 3;
 
   useEffect(() => {
     if (preselectedPatient) {
@@ -99,32 +97,8 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
     };
   };
 
-  // Helper function to get the best supported audio format
-  const getBestSupportedMimeType = () => {
-    const types = [
-      'audio/webm;codecs=opus',
-      'audio/webm',
-      'audio/ogg;codecs=opus',
-      'audio/mp4',
-      'audio/mpeg',
-      'audio/wav'
-    ];
-    
-    for (const type of types) {
-      if (MediaRecorder.isTypeSupported(type)) {
-        console.log(`Using supported audio mime type: ${type}`);
-        return type;
-      }
-    }
-    
-    console.warn("No preferred mime types supported, using default");
-    return '';  // Let the browser choose the default
-  };
-
   const startRecording = async () => {
     setRecordingError(null);
-    setAudioChunksEmpty();
-    setRetryCount(0);
     
     if (!patientName.trim()) {
       toast({
@@ -145,23 +119,10 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
     }
 
     try {
-      console.log("Requesting microphone access...");
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        } 
-      });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       
-      const mimeType = getBestSupportedMimeType();
-      console.log(`Creating MediaRecorder with mime type: ${mimeType || 'default'}`);
-      
-      const mediaRecorder = mimeType 
-        ? new MediaRecorder(stream, {mimeType})
-        : new MediaRecorder(stream);
-        
+      const mediaRecorder = new MediaRecorder(stream, {mimeType: 'audio/webm;codecs=opus'});
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
       
@@ -192,9 +153,8 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         }
         
         try {
-          console.log(`Creating audio blob from ${audioChunksRef.current.length} chunks`);
-          const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
-          console.log(`Audio blob created: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          console.log(`Audio blob created: ${audioBlob.size} bytes`);
           
           if (audioBlob.size === 0) {
             throw new Error("El archivo de audio está vacío");
@@ -205,7 +165,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
           
           if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
-            console.log("Audio tracks stopped");
           }
           
           await processRecording(audioBlob);
@@ -220,9 +179,8 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         }
       };
       
-      // Start with more frequent data collection for better reliability
-      mediaRecorder.start(500); // Collect data every 500ms
-      console.log("Recording started successfully");
+      // Start with small data intervals to detect problems early
+      mediaRecorder.start(1000); // Collect data every second
       setIsRecording(true);
       setRecordingTime(0);
       
@@ -272,17 +230,9 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
     }
   };
 
-  // Function to clear audio chunks
-  const setAudioChunksEmpty = () => {
-    if (audioChunksRef.current) {
-      audioChunksRef.current = [];
-    }
-  };
-
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       try {
-        console.log("Stopping recording...");
         mediaRecorderRef.current.stop();
         setIsRecording(false);
         
@@ -322,24 +272,10 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         selectedPatientId: selectedPatient?.id
       });
       
-      // Intento de transcripción con reintentos
-      let transcriptionResponse = await groqApi.transcribeAudio(audioBlob);
-      let currentRetry = 0;
-      
-      // Si falla, intentamos hasta MAX_RETRIES veces
-      while (!transcriptionResponse.success && currentRetry < MAX_RETRIES) {
-        console.log(`Reintentando transcripción (${currentRetry + 1}/${MAX_RETRIES})...`);
-        setRetryCount(currentRetry + 1);
-        
-        // Esperar un momento antes de reintentar (backoff exponencial)
-        await new Promise(r => setTimeout(r, 2000 * Math.pow(2, currentRetry)));
-        
-        transcriptionResponse = await groqApi.transcribeAudio(audioBlob);
-        currentRetry++;
-      }
+      const transcriptionResponse = await groqApi.transcribeAudio(audioBlob);
       
       if (!transcriptionResponse.success) {
-        throw new Error(transcriptionResponse.error || "La transcripción falló después de varios intentos");
+        throw new Error(transcriptionResponse.error || "La transcripción falló");
       }
       
       const transcription = transcriptionResponse.data.text;
@@ -400,7 +336,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       setAudioUrl(null);
       setSelectedPatient(null);
       setRecordingError(null);
-      setRetryCount(0);
     } catch (error) {
       console.error("Error de procesamiento:", error);
       setRecordingError(`Error de procesamiento: ${error instanceof Error ? error.message : 'Error desconocido'}`);
@@ -464,14 +399,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
             <Alert variant="destructive" className="mt-4">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Error en la grabación</AlertTitle>
-              <AlertDescription>
-                {recordingError}
-                {retryCount > 0 && (
-                  <div className="mt-2">
-                    <span className="font-medium">Intentos de conexión: {retryCount}/{MAX_RETRIES}</span>
-                  </div>
-                )}
-              </AlertDescription>
+              <AlertDescription>{recordingError}</AlertDescription>
             </Alert>
           )}
           
@@ -485,11 +413,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
               ) : (
                 <div className="flex items-center justify-center space-x-2">
                   <Loader2 className="h-4 w-4 animate-spin text-medical-600" />
-                  <span className="text-medical-600 font-medium">
-                    {retryCount > 0 
-                      ? `Procesando consulta... (Intento ${retryCount}/${MAX_RETRIES})` 
-                      : "Procesando consulta..."}
-                  </span>
+                  <span className="text-medical-600 font-medium">Procesando consulta...</span>
                 </div>
               )}
               <div className="waveform mt-2"></div>
