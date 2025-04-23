@@ -1,6 +1,6 @@
-
 import { ApiResponse } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
+import { PROXY_URL } from "@/integrations/supabase/client";
 
 // Define the Prompt interface to match the database schema
 interface Prompt {
@@ -15,8 +15,9 @@ interface Prompt {
 // Esta clase usará la API key compartida desde Supabase
 export class GroqApiService {
   private apiKey: string | null = null;
-  private baseUrl = "https://api.groq.com/openai/v1";
+  private baseUrl = PROXY_URL || "https://cors-anywhere.herokuapp.com/https://api.groq.com/openai/v1";
   private cachedSystemPrompt: string | null = null;
+  private useProxy = true; // Configuración para usar el proxy
   
   // Dictionary of common medical term corrections
   private medicalTermCorrections: Record<string, string> = {
@@ -98,6 +99,18 @@ export class GroqApiService {
   constructor(apiKey?: string) {
     if (apiKey) {
       this.apiKey = apiKey;
+    }
+    
+    // Intenta detectar si estamos en un entorno que no necesita proxy
+    // En entornos de producción o donde CORS no es un problema, podemos desactivar el proxy
+    if (typeof window !== 'undefined' && window.location.hostname.includes('lovable')) {
+      // Estamos en un entorno de desarrollo Lovable, mantener el proxy
+      console.log("Usando proxy para solicitudes a Groq API");
+    } else {
+      // En otros entornos, podemos intentar sin proxy primero
+      this.useProxy = false;
+      this.baseUrl = "https://api.groq.com/openai/v1";
+      console.log("Usando conexión directa a Groq API");
     }
   }
 
@@ -377,44 +390,59 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
       formData.append("file", processingBlob, fileName);
       formData.append("model", "whisper-large-v3");
 
-      console.log("Sending transcription request to Groq API...");
-      const response = await fetch(`${this.baseUrl}/audio/transcriptions`, {
+      // Configuración avanzada para el fetch con manejo de CORS y errores
+      const fetchOptions: RequestInit = {
         method: "POST",
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
           // No Content-Type header for FormData
         },
         body: formData,
-      });
+        mode: 'cors', // Intentamos con modo CORS
+        credentials: 'omit' // No enviamos cookies para evitar problemas de CORS
+      };
 
-      console.log("Transcription response status:", response.status);
+      console.log("Sending transcription request to Groq API via:", this.baseUrl);
+      console.log("Usando proxy:", this.useProxy);
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = "La transcripción falló";
+      // Intentar con fetch normal primero, y si falla, usar XMLHttpRequest como fallback
+      try {
+        const response = await this.fetchWithTimeout(`${this.baseUrl}/audio/transcriptions`, fetchOptions, 30000);
         
-        try {
-          // Try to parse error as JSON
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.error?.message || errorMessage;
-        } catch (e) {
-          // If not JSON, use the text directly
-          errorMessage = errorText || errorMessage;
+        console.log("Transcription response status:", response.status);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          let errorMessage = "La transcripción falló";
+          
+          try {
+            // Try to parse error as JSON
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.error?.message || errorMessage;
+          } catch (e) {
+            // If not JSON, use the text directly
+            errorMessage = errorText || errorMessage;
+          }
+          
+          console.error("Transcription failed:", errorMessage);
+          return { success: false, error: errorMessage };
+        }
+
+        const data = await response.json();
+        console.log("Transcription successful, text length:", data.text?.length || 0);
+        
+        // Apply comprehensive medical term correction to the transcription
+        if (data.text) {
+          data.text = this.correctMedicalTerms(data.text);
         }
         
-        console.error("Transcription failed:", errorMessage);
-        return { success: false, error: errorMessage };
+        return { success: true, data };
+      } catch (fetchError) {
+        console.error("Fetch Error:", fetchError);
+        
+        // Si el fetch falla, intentamos con XMLHttpRequest como alternativa
+        return this.transcribeWithXHR(audioBlob);
       }
-
-      const data = await response.json();
-      console.log("Transcription successful, text length:", data.text?.length || 0);
-      
-      // Apply comprehensive medical term correction to the transcription
-      if (data.text) {
-        data.text = this.correctMedicalTerms(data.text);
-      }
-      
-      return { success: true, data };
     } catch (error) {
       console.error("Exception during transcription:", error);
       const errorMessage = error instanceof Error ? error.message : "Error desconocido";
@@ -423,6 +451,69 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
         error: `No se pudo transcribir el audio: ${errorMessage}` 
       };
     }
+  }
+  
+  // Método fetch con timeout para evitar solicitudes que se queden colgadas
+  private async fetchWithTimeout(url: string, options: RequestInit, timeout: number): Promise<Response> {
+    return Promise.race([
+      fetch(url, options),
+      new Promise<Response>((_, reject) => {
+        setTimeout(() => reject(new Error(`Request timed out after ${timeout}ms`)), timeout);
+      })
+    ]) as Promise<Response>;
+  }
+  
+  // Método alternativo usando XMLHttpRequest para situaciones donde fetch falla
+  private transcribeWithXHR(audioBlob: Blob): Promise<ApiResponse> {
+    return new Promise((resolve) => {
+      console.log("Trying with XMLHttpRequest as fallback");
+      
+      const xhr = new XMLHttpRequest();
+      const fileName = `recording.${audioBlob.type.split('/')[1] || 'webm'}`;
+      
+      xhr.open("POST", `${this.baseUrl}/audio/transcriptions`, true);
+      xhr.setRequestHeader("Authorization", `Bearer ${this.apiKey}`);
+      
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            console.log("XHR transcription successful");
+            
+            if (data.text) {
+              data.text = this.correctMedicalTerms(data.text);
+            }
+            
+            resolve({ success: true, data });
+          } catch (parseError) {
+            console.error("Error parsing XHR response:", parseError);
+            resolve({ success: false, error: "Error al procesar la respuesta" });
+          }
+        } else {
+          console.error("XHR Error:", xhr.status, xhr.statusText);
+          resolve({ success: false, error: `Error ${xhr.status}: ${xhr.statusText || "Error desconocido"}` });
+        }
+      };
+      
+      xhr.onerror = () => {
+        console.error("XHR network error");
+        resolve({ success: false, error: "Error de red al intentar transcribir el audio" });
+      };
+      
+      xhr.ontimeout = () => {
+        console.error("XHR timeout");
+        resolve({ success: false, error: "Tiempo de espera agotado al intentar transcribir el audio" });
+      };
+      
+      // Establecer timeout
+      xhr.timeout = 30000; // 30 segundos
+      
+      const formData = new FormData();
+      formData.append("file", audioBlob, fileName);
+      formData.append("model", "whisper-large-v3");
+      
+      xhr.send(formData);
+    });
   }
 
   // Enhanced generate summary method that ensures proper structured format
@@ -444,7 +535,8 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
       // Get the system prompt from the database - this now ensures the standardized format
       const systemPrompt = await this.getSystemPrompt();
       
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      // Similar al método de transcripción, usamos el proxy cuando es necesario
+      const fetchOptions: RequestInit = {
         method: "POST",
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
@@ -465,29 +557,38 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
           temperature: 0.2, // Lower temperature for more consistent and structured output
           max_tokens: 1500 // Increased for more comprehensive summaries
         }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        return { success: false, error: errorData.error?.message || "La generación del resumen falló" };
-      }
-
-      const data = await response.json();
+        mode: 'cors',
+        credentials: 'omit'
+      };
       
-      // Apply any additional corrections to the summary response and ensure lab tables are formatted correctly
-      if (data.choices && data.choices[0]?.message?.content) {
-        let summarizedContent = data.choices[0].message.content;
+      try {
+        const response = await this.fetchWithTimeout(`${this.baseUrl}/chat/completions`, fetchOptions, 45000);
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          return { success: false, error: errorData.error?.message || "La generación del resumen falló" };
+        }
+
+        const data = await response.json();
         
-        // First correct any medical terms
-        summarizedContent = this.correctMedicalTerms(summarizedContent);
+        // Apply any additional corrections to the summary response and ensure lab tables are formatted correctly
+        if (data.choices && data.choices[0]?.message?.content) {
+          let summarizedContent = data.choices[0].message.content;
+          
+          // First correct any medical terms
+          summarizedContent = this.correctMedicalTerms(summarizedContent);
+          
+          // Ensure laboratory values are properly formatted as tables
+          summarizedContent = this.ensureLabResultsInTables(summarizedContent);
+          
+          data.choices[0].message.content = summarizedContent;
+        }
         
-        // Ensure laboratory values are properly formatted as tables
-        summarizedContent = this.ensureLabResultsInTables(summarizedContent);
-        
-        data.choices[0].message.content = summarizedContent;
+        return { success: true, data };
+      } catch (fetchError) {
+        console.error("Error en fetch para generación de resumen:", fetchError);
+        return { success: false, error: "Error al comunicarse con la API: " + fetchError.message };
       }
-      
-      return { success: true, data };
     } catch (error) {
       console.error("Error en la generación del resumen:", error);
       return { success: false, error: "No se pudo generar el resumen" };

@@ -26,6 +26,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showPatientSelector, setShowPatientSelector] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -34,6 +35,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   const { toast } = useToast();
 
   const MAX_RECORDING_TIME = 30 * 60; // 30 minutes in seconds
+  const MAX_RETRIES = 3;
 
   useEffect(() => {
     if (preselectedPatient) {
@@ -122,6 +124,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   const startRecording = async () => {
     setRecordingError(null);
     setAudioChunksEmpty();
+    setRetryCount(0);
     
     if (!patientName.trim()) {
       toast({
@@ -319,10 +322,24 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         selectedPatientId: selectedPatient?.id
       });
       
-      const transcriptionResponse = await groqApi.transcribeAudio(audioBlob);
+      // Intento de transcripción con reintentos
+      let transcriptionResponse = await groqApi.transcribeAudio(audioBlob);
+      let currentRetry = 0;
+      
+      // Si falla, intentamos hasta MAX_RETRIES veces
+      while (!transcriptionResponse.success && currentRetry < MAX_RETRIES) {
+        console.log(`Reintentando transcripción (${currentRetry + 1}/${MAX_RETRIES})...`);
+        setRetryCount(currentRetry + 1);
+        
+        // Esperar un momento antes de reintentar (backoff exponencial)
+        await new Promise(r => setTimeout(r, 2000 * Math.pow(2, currentRetry)));
+        
+        transcriptionResponse = await groqApi.transcribeAudio(audioBlob);
+        currentRetry++;
+      }
       
       if (!transcriptionResponse.success) {
-        throw new Error(transcriptionResponse.error || "La transcripción falló");
+        throw new Error(transcriptionResponse.error || "La transcripción falló después de varios intentos");
       }
       
       const transcription = transcriptionResponse.data.text;
@@ -383,6 +400,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       setAudioUrl(null);
       setSelectedPatient(null);
       setRecordingError(null);
+      setRetryCount(0);
     } catch (error) {
       console.error("Error de procesamiento:", error);
       setRecordingError(`Error de procesamiento: ${error instanceof Error ? error.message : 'Error desconocido'}`);
@@ -446,7 +464,14 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
             <Alert variant="destructive" className="mt-4">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Error en la grabación</AlertTitle>
-              <AlertDescription>{recordingError}</AlertDescription>
+              <AlertDescription>
+                {recordingError}
+                {retryCount > 0 && (
+                  <div className="mt-2">
+                    <span className="font-medium">Intentos de conexión: {retryCount}/{MAX_RETRIES}</span>
+                  </div>
+                )}
+              </AlertDescription>
             </Alert>
           )}
           
@@ -460,7 +485,11 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
               ) : (
                 <div className="flex items-center justify-center space-x-2">
                   <Loader2 className="h-4 w-4 animate-spin text-medical-600" />
-                  <span className="text-medical-600 font-medium">Procesando consulta...</span>
+                  <span className="text-medical-600 font-medium">
+                    {retryCount > 0 
+                      ? `Procesando consulta... (Intento ${retryCount}/${MAX_RETRIES})` 
+                      : "Procesando consulta..."}
+                  </span>
                 </div>
               )}
               <div className="waveform mt-2"></div>
