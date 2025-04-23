@@ -1,3 +1,4 @@
+
 import { ApiResponse } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -337,51 +338,23 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
     return this.apiKey !== null && this.apiKey.trim() !== '';
   }
 
-  // Enhanced transcribe audio method with improved error handling and retry logic
+  // Enhanced transcribe audio method with improved medical term correction
   async transcribeAudio(audioBlob: Blob): Promise<ApiResponse> {
-    console.log("Starting transcribeAudio with Groq API");
-    
     // Si no hay API key, intentar obtenerla de Supabase
     if (!this.hasApiKey()) {
-      console.log("No API key found, attempting to fetch shared key");
       const sharedKey = await this.fetchSharedApiKey();
       if (sharedKey) {
         this.setApiKey(sharedKey);
-        console.log("Successfully fetched shared API key");
       } else {
-        console.error("Failed to obtain API key from shared keys");
         return { success: false, error: "No se pudo obtener la clave API" };
       }
     }
 
     try {
-      // Verify the audio blob is valid before processing
-      if (!audioBlob || audioBlob.size === 0) {
-        console.error("Audio blob is empty or invalid");
-        return { success: false, error: "El archivo de audio está vacío o es inválido" };
-      }
-
-      console.log("Preparing to transcribe audio:", {
-        blobSize: audioBlob.size,
-        blobType: audioBlob.type,
-        apiKey: this.apiKey ? "Present (length: " + this.apiKey.length + ")" : "Missing"
-      });
-
       const formData = new FormData();
-      
-      // Use a more descriptive filename with extension matching the MIME type
-      const filename = audioBlob.type.includes('webm') ? 'recording.webm' : 'recording.mp3';
-      formData.append("file", audioBlob, filename);
+      formData.append("file", audioBlob, "recording.webm");
       formData.append("model", "whisper-large-v3");
-      
-      // For debugging: log the content type being used
-      console.log("Transcription request MIME type:", audioBlob.type);
-      console.log("Using API endpoint:", `${this.baseUrl}/audio/transcriptions`);
 
-      // Set timeout to 60 seconds for long audio files
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000);
-      
       const response = await fetch(`${this.baseUrl}/audio/transcriptions`, {
         method: "POST",
         headers: {
@@ -389,30 +362,11 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
           // No Content-Type header for FormData
         },
         body: formData,
-        signal: controller.signal
-      }).finally(() => {
-        clearTimeout(timeoutId);
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage;
-        try {
-          // Try to parse as JSON
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.error?.message || `Transcripción fallida (${response.status})`;
-        } catch (e) {
-          // If not JSON, use the raw text
-          errorMessage = `Transcripción fallida: ${errorText.slice(0, 100)}... (${response.status})`;
-        }
-        
-        console.error("Transcription API error:", {
-          status: response.status,
-          statusText: response.statusText,
-          errorMessage
-        });
-        
-        return { success: false, error: errorMessage };
+        const errorData = await response.json();
+        return { success: false, error: errorData.error?.message || "La transcripción falló" };
       }
 
       const data = await response.json();
@@ -420,35 +374,12 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
       // Apply comprehensive medical term correction to the transcription
       if (data.text) {
         data.text = this.correctMedicalTerms(data.text);
-        console.log("Transcription successful, length:", data.text.length);
-      } else {
-        console.error("Transcription API returned no text");
-        return { success: false, error: "La API no devolvió ningún texto transcrito" };
       }
       
       return { success: true, data };
     } catch (error) {
       console.error("Error de transcripción:", error);
-      
-      // Check specifically for network errors
-      const errorMessage = error instanceof Error ? error.message : "Error desconocido";
-      const isNetworkError = errorMessage === "Failed to fetch" || 
-                            errorMessage.includes("network") || 
-                            errorMessage.includes("cors");
-      
-      if (isNetworkError) {
-        return { 
-          success: false, 
-          error: "No se pudo conectar con el servicio de transcripción. Verifique su conexión a internet e intente nuevamente."
-        };
-      }
-      
-      return { 
-        success: false, 
-        error: error instanceof Error 
-          ? `No se pudo transcribir el audio: ${error.message}` 
-          : "No se pudo transcribir el audio por un error desconocido" 
-      };
+      return { success: false, error: "No se pudo transcribir el audio" };
     }
   }
 
