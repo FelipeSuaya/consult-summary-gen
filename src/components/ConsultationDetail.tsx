@@ -23,16 +23,19 @@ const renderMarkdownTable = (markdownTable: string) => {
   try {
     const rows = markdownTable.trim().split('\n');
     if (rows.length < 2) return markdownTable;
-    
+
     const headerRow = rows[0].trim();
     const headers = headerRow
       .split('|')
       .map(cell => cell.trim())
       .filter(cell => cell !== '');
-      
+
+    const lowerHeaders = headers.map(h => h.toLowerCase());
+    const esLaboratorio = lowerHeaders.includes("parámetro") && lowerHeaders.includes("resultado");
+
     const isSeparator = rows[1].trim().replace(/[^|\-\s]/g, '') === rows[1].trim();
     const dataStartIndex = isSeparator ? 2 : 1;
-    
+
     const dataRows = rows.slice(dataStartIndex).map(row => {
       return row
         .trim()
@@ -40,18 +43,33 @@ const renderMarkdownTable = (markdownTable: string) => {
         .map(cell => cell.trim())
         .filter(cell => cell !== '');
     }).filter(row => row.length > 0);
-    
+
+    let displayHeaders = headers;
+    let displayRows = dataRows;
+    if (esLaboratorio) {
+      const colEstudio = lowerHeaders.findIndex(h =>
+        h === "parámetro" || h === "estudio" || h === "nombre" || h === "análisis"
+      );
+      const colResultado = lowerHeaders.findIndex(h => h === "resultado");
+
+      displayHeaders = ["Estudio", "Resultado"];
+      displayRows = dataRows.map(row => [
+        row[colEstudio] || "",
+        row[colResultado] || ""
+      ]);
+    }
+
     return (
       <Table wrapperClassName="w-full overflow-x-auto border border-gray-200 rounded-md">
         <TableHeader className="bg-medical-50">
           <TableRow>
-            {headers.map((header, i) => (
+            {displayHeaders.map((header, i) => (
               <TableHead key={`header-${i}`} className="font-medium text-medical-800">{header}</TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {dataRows.map((row, rowIndex) => (
+          {displayRows.map((row, rowIndex) => (
             <TableRow key={`row-${rowIndex}`} className={rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"}>
               {row.map((cell, cellIndex) => (
                 <TableCell key={`cell-${rowIndex}-${cellIndex}`}>{cell}</TableCell>
