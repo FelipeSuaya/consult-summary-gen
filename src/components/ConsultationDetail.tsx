@@ -19,43 +19,84 @@ interface ConsultationDetailProps {
 
 const renderMarkdownTable = (markdownTable: string) => {
   if (!markdownTable.includes('|')) return markdownTable;
-  
+
   try {
+    const isLabTable = /par[aá]metro|estudio/i.test(markdownTable) && /resultado/i.test(markdownTable);
+
     const rows = markdownTable.trim().split('\n');
     if (rows.length < 2) return markdownTable;
-    
+
     const headerRow = rows[0].trim();
     const headers = headerRow
       .split('|')
       .map(cell => cell.trim())
       .filter(cell => cell !== '');
-      
+
+    let studyIndex = headers.findIndex(
+      h => /par[aá]metro|estudio/i.test(h)
+    );
+    let resultIndex = headers.findIndex(
+      h => /resultado/i.test(h)
+    );
+
+    if (!isLabTable || studyIndex === -1 || resultIndex === -1) {
+      const isSeparator = rows[1].trim().replace(/[^|\-\s]/g, '') === rows[1].trim();
+      const dataStartIndex = isSeparator ? 2 : 1;
+      const dataRows = rows.slice(dataStartIndex).map(row => {
+        return row
+          .trim()
+          .split('|')
+          .map(cell => cell.trim())
+          .filter(cell => cell !== '');
+      }).filter(row => row.length > 0);
+
+      return (
+        <Table wrapperClassName="w-full overflow-x-auto border border-gray-200 rounded-md">
+          <TableHeader className="bg-medical-50">
+            <TableRow>
+              {headers.map((header, i) => (
+                <TableHead key={`header-${i}`} className="font-medium text-medical-800">{header}</TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {dataRows.map((row, rowIndex) => (
+              <TableRow key={`row-${rowIndex}`} className={rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                {row.map((cell, cellIndex) => (
+                  <TableCell key={`cell-${rowIndex}-${cellIndex}`}>{cell}</TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      );
+    }
+
+    const customHeaders = ["Estudio", "Resultado"];
     const isSeparator = rows[1].trim().replace(/[^|\-\s]/g, '') === rows[1].trim();
     const dataStartIndex = isSeparator ? 2 : 1;
-    
     const dataRows = rows.slice(dataStartIndex).map(row => {
       return row
         .trim()
         .split('|')
         .map(cell => cell.trim())
         .filter(cell => cell !== '');
-    }).filter(row => row.length > 0);
-    
+    }).filter(row => row.length > Math.max(studyIndex, resultIndex));
+
     return (
       <Table wrapperClassName="w-full overflow-x-auto border border-gray-200 rounded-md">
         <TableHeader className="bg-medical-50">
           <TableRow>
-            {headers.map((header, i) => (
-              <TableHead key={`header-${i}`} className="font-medium text-medical-800">{header}</TableHead>
+            {customHeaders.map((header, i) => (
+              <TableHead key={`lab-header-${i}`} className="font-medium text-medical-800">{header}</TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
           {dataRows.map((row, rowIndex) => (
-            <TableRow key={`row-${rowIndex}`} className={rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-              {row.map((cell, cellIndex) => (
-                <TableCell key={`cell-${rowIndex}-${cellIndex}`}>{cell}</TableCell>
-              ))}
+            <TableRow key={`lab-row-${rowIndex}`} className={rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+              <TableCell>{row[studyIndex]}</TableCell>
+              <TableCell>{row[resultIndex]}</TableCell>
             </TableRow>
           ))}
         </TableBody>
