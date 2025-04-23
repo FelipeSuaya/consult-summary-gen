@@ -338,23 +338,46 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
     return this.apiKey !== null && this.apiKey.trim() !== '';
   }
 
-  // Enhanced transcribe audio method with improved medical term correction
+  // Enhanced transcribe audio method with improved error handling and better file format support
   async transcribeAudio(audioBlob: Blob): Promise<ApiResponse> {
+    console.log("Starting audio transcription, blob size:", audioBlob.size, "bytes, type:", audioBlob.type);
+    
     // Si no hay API key, intentar obtenerla de Supabase
     if (!this.hasApiKey()) {
       const sharedKey = await this.fetchSharedApiKey();
       if (sharedKey) {
         this.setApiKey(sharedKey);
+        console.log("Using shared API key from Supabase");
       } else {
+        console.error("No API key available for transcription");
         return { success: false, error: "No se pudo obtener la clave API" };
       }
     }
 
     try {
+      // Ensure we have a valid audio blob
+      if (!audioBlob || audioBlob.size === 0) {
+        console.error("Empty audio blob provided");
+        return { success: false, error: "No hay datos de audio para transcribir" };
+      }
+      
+      // Check if the blob type is supported
+      const supportedTypes = ['audio/webm', 'audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/ogg'];
+      let processingBlob = audioBlob;
+      
+      if (!supportedTypes.includes(audioBlob.type)) {
+        console.warn(`Audio type ${audioBlob.type} may not be supported, proceeding anyway`);
+      }
+      
+      // Create a filename that includes the type for better mime type detection
+      const fileName = `recording.${audioBlob.type.split('/')[1] || 'webm'}`;
+      console.log("Using filename:", fileName);
+      
       const formData = new FormData();
-      formData.append("file", audioBlob, "recording.webm");
+      formData.append("file", processingBlob, fileName);
       formData.append("model", "whisper-large-v3");
 
+      console.log("Sending transcription request to Groq API...");
       const response = await fetch(`${this.baseUrl}/audio/transcriptions`, {
         method: "POST",
         headers: {
@@ -364,12 +387,27 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
         body: formData,
       });
 
+      console.log("Transcription response status:", response.status);
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        return { success: false, error: errorData.error?.message || "La transcripción falló" };
+        const errorText = await response.text();
+        let errorMessage = "La transcripción falló";
+        
+        try {
+          // Try to parse error as JSON
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error?.message || errorMessage;
+        } catch (e) {
+          // If not JSON, use the text directly
+          errorMessage = errorText || errorMessage;
+        }
+        
+        console.error("Transcription failed:", errorMessage);
+        return { success: false, error: errorMessage };
       }
 
       const data = await response.json();
+      console.log("Transcription successful, text length:", data.text?.length || 0);
       
       // Apply comprehensive medical term correction to the transcription
       if (data.text) {
@@ -378,8 +416,12 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
       
       return { success: true, data };
     } catch (error) {
-      console.error("Error de transcripción:", error);
-      return { success: false, error: "No se pudo transcribir el audio" };
+      console.error("Exception during transcription:", error);
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido";
+      return { 
+        success: false, 
+        error: `No se pudo transcribir el audio: ${errorMessage}` 
+      };
     }
   }
 

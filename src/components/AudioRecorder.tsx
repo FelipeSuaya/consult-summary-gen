@@ -97,8 +97,31 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
     };
   };
 
+  // Helper function to get the best supported audio format
+  const getBestSupportedMimeType = () => {
+    const types = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/mp4',
+      'audio/mpeg',
+      'audio/wav'
+    ];
+    
+    for (const type of types) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        console.log(`Using supported audio mime type: ${type}`);
+        return type;
+      }
+    }
+    
+    console.warn("No preferred mime types supported, using default");
+    return '';  // Let the browser choose the default
+  };
+
   const startRecording = async () => {
     setRecordingError(null);
+    setAudioChunksEmpty();
     
     if (!patientName.trim()) {
       toast({
@@ -119,10 +142,23 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log("Requesting microphone access...");
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        } 
+      });
       streamRef.current = stream;
       
-      const mediaRecorder = new MediaRecorder(stream, {mimeType: 'audio/webm;codecs=opus'});
+      const mimeType = getBestSupportedMimeType();
+      console.log(`Creating MediaRecorder with mime type: ${mimeType || 'default'}`);
+      
+      const mediaRecorder = mimeType 
+        ? new MediaRecorder(stream, {mimeType})
+        : new MediaRecorder(stream);
+        
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
       
@@ -153,8 +189,9 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         }
         
         try {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          console.log(`Audio blob created: ${audioBlob.size} bytes`);
+          console.log(`Creating audio blob from ${audioChunksRef.current.length} chunks`);
+          const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
+          console.log(`Audio blob created: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
           
           if (audioBlob.size === 0) {
             throw new Error("El archivo de audio está vacío");
@@ -165,6 +202,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
           
           if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
+            console.log("Audio tracks stopped");
           }
           
           await processRecording(audioBlob);
@@ -179,8 +217,9 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         }
       };
       
-      // Start with small data intervals to detect problems early
-      mediaRecorder.start(1000); // Collect data every second
+      // Start with more frequent data collection for better reliability
+      mediaRecorder.start(500); // Collect data every 500ms
+      console.log("Recording started successfully");
       setIsRecording(true);
       setRecordingTime(0);
       
@@ -230,9 +269,17 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
     }
   };
 
+  // Function to clear audio chunks
+  const setAudioChunksEmpty = () => {
+    if (audioChunksRef.current) {
+      audioChunksRef.current = [];
+    }
+  };
+
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       try {
+        console.log("Stopping recording...");
         mediaRecorderRef.current.stop();
         setIsRecording(false);
         
