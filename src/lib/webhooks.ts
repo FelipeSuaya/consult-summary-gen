@@ -14,7 +14,7 @@ export const sendToWebhook = async (payload: WebhookPayload) => {
       payload.audio_url = ""; // Proporcionar un valor por defecto
     }
     
-    const response = await fetch('https://n8n-1-o3cv.onrender.com/workflow/Exwq9Ann1CxRZ8T3', {
+    const response = await fetch('https://n8n-1-o3cv.onrender.com/workflow/RcosNDWobxWoEK3C', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
