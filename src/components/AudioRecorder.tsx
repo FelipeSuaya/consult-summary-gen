@@ -298,23 +298,23 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         patientId: selectedPatient?.id
       };
 
-      try {
-        await sendToWebhook({
-          audio_url: audioUrl || "",
-          transcripcion: transcription,
-          resumen: summary
-        });
+      const webhookSuccess = await sendToWebhook({
+        audio_url: audioUrl || "",
+        transcripcion: transcription,
+        resumen: summary
+      });
 
+      if (webhookSuccess) {
         toast({
           title: "Datos Enviados",
           description: "Los datos se han enviado correctamente al webhook",
         });
-      } catch (webhookError) {
-        console.error("Error al enviar al webhook:", webhookError);
+      } else {
+        console.warn("No se pudieron enviar los datos al webhook externo");
         toast({
-          title: "Error al Enviar Datos",
-          description: "No se pudieron enviar los datos al webhook externo",
-          variant: "destructive",
+          title: "Advertencia",
+          description: "No se pudieron enviar los datos al webhook externo, pero el procesamiento continuará",
+          variant: "default",
         });
       }
       
