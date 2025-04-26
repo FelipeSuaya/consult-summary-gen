@@ -265,25 +265,32 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         selectedPatientId: selectedPatient?.id
       });
       
-      const transcriptionResponse = await groqApi.transcribeAudio(audioBlob);
+      const base64Audio = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64String = reader.result as string;
+          const base64WithoutPrefix = base64String.split(',')[1];
+          resolve(base64WithoutPrefix);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(audioBlob);
+      });
       
-      if (!transcriptionResponse.success) {
-        throw new Error(transcriptionResponse.error || "La transcripción falló");
+      const webhookResponse = await sendToWebhook({
+        audio_url: audioUrl || "",
+        audio_base64: base64Audio,
+        transcripcion: "",
+        resumen: ""
+      });
+      
+      if (!webhookResponse.success) {
+        throw new Error(webhookResponse.error || "Error en el procesamiento del audio");
       }
       
-      const transcription = transcriptionResponse.data.text;
-      console.log("Transcription completed successfully, length:", transcription.length);
+      const { transcripcion, resumen } = webhookResponse.data;
+      console.log("Webhook response processed:", { transcripcion, resumen });
       
-      const summaryResponse = await groqApi.generateSummary(transcription);
-      
-      if (!summaryResponse.success) {
-        throw new Error(summaryResponse.error || "La generación del resumen falló");
-      }
-      
-      const summary = summaryResponse.data.choices[0].message.content;
-      console.log("Summary generated successfully, length:", summary.length);
-      
-      const patientData = groqApi.extractPatientData(summary);
+      const patientData = groqApi.extractPatientData(resumen);
       
       const consultationId = crypto.randomUUID();
       
@@ -292,31 +299,11 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         patientName: patientName.trim(),
         dateTime: new Date().toISOString(),
         audioUrl: audioUrl || undefined,
-        transcription,
-        summary,
+        transcription: transcripcion,
+        summary: resumen,
         patientData,
         patientId: selectedPatient?.id
       };
-
-      const webhookSuccess = await sendToWebhook({
-        audio_url: audioUrl || "",
-        transcripcion: transcription,
-        resumen: summary
-      });
-
-      if (webhookSuccess) {
-        toast({
-          title: "Datos Enviados",
-          description: "Los datos se han enviado correctamente al webhook",
-        });
-      } else {
-        console.warn("No se pudieron enviar los datos al webhook externo");
-        toast({
-          title: "Advertencia",
-          description: "No se pudieron enviar los datos al webhook externo, pero el procesamiento continuará",
-          variant: "default",
-        });
-      }
       
       const saveError = await saveConsultation(newConsultation);
       
