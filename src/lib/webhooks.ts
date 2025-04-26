@@ -7,7 +7,7 @@ type WebhookPayload = {
 
 export const sendToWebhook = async (payload: WebhookPayload) => {
   try {
-    const response = await fetch('https://n8n-1-o3cv.onrender.com/workflow/KeInTGyDkuqla0hs', {
+    const response = await fetch('http://localhost:5678/webhook/lovable-audio', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
