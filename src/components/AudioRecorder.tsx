@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,6 +10,7 @@ import { saveConsultation } from "@/lib/storage";
 import { ConsultationRecord, Patient } from "@/types";
 import PatientSelector from "./PatientSelector";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { sendToWebhook } from "@/lib/webhooks";
 
 interface AudioRecorderProps {
   onRecordingComplete: (consultation: ConsultationRecord) => void;
@@ -52,7 +52,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         URL.revokeObjectURL(audioUrl);
       }
 
-      // Clean up media stream when component unmounts
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
@@ -67,7 +66,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
 
   const setupMediaRecorderErrorHandling = (mediaRecorder: MediaRecorder) => {
     mediaRecorder.onerror = (event: Event & { error?: Error }) => {
-      // Use the specific error from the event
       const error = event.error || new Error("Error desconocido en la grabación");
       console.error("MediaRecorder error:", error);
       setRecordingError(`Error en la grabación: ${error.message}`);
@@ -78,7 +76,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         variant: "destructive",
       });
       
-      // Clean up recording state
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -86,7 +83,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       
       setIsRecording(false);
       
-      // Try to stop the recorder if it's active
       try {
         if (mediaRecorder.state !== 'inactive') {
           mediaRecorder.stop();
@@ -131,7 +127,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
-          // Monitor data collection
           console.log(`Chunk collected: ${event.data.size} bytes. Total chunks: ${audioChunksRef.current.length}`);
         }
       };
@@ -139,7 +134,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       mediaRecorder.onstop = async () => {
         if (recordingError) {
           console.log("Recording stopped due to an error");
-          return; // Don't process if there was an error
+          return;
         }
         
         if (audioChunksRef.current.length === 0) {
@@ -179,15 +174,14 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         }
       };
       
-      // Start with small data intervals to detect problems early
-      mediaRecorder.start(1000); // Collect data every second
+      mediaRecorder.start(1000);
       setIsRecording(true);
       setRecordingTime(0);
       
       timerRef.current = window.setInterval(() => {
         setRecordingTime(prev => {
           if (prev + 1 >= MAX_RECORDING_TIME) {
-            stopRecording(); // Automatically stop recording at max time
+            stopRecording();
             toast({
               title: "Límite de Tiempo Alcanzado",
               description: "Se ha alcanzado el límite máximo de grabación de 30 minutos.",
@@ -198,7 +192,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
           return prev + 1;
         });
         
-        // Check that recorder is still active
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'recording') {
           console.warn("MediaRecorder is no longer recording");
           setRecordingError("La grabación se detuvo inesperadamente. Por favor intente nuevamente.");
@@ -292,11 +285,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       
       const patientData = groqApi.extractPatientData(summary);
       
-      console.log("Creating consultation with patient info:", {
-        patientName: patientName.trim(),
-        patientId: selectedPatient?.id || "NO_PATIENT_SELECTED"
-      });
-      
       const consultationId = crypto.randomUUID();
       
       const newConsultation: ConsultationRecord = {
@@ -309,13 +297,26 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         patientData,
         patientId: selectedPatient?.id
       };
-      
-      console.log("Saving consultation with data:", {
-        id: newConsultation.id,
-        patientName: newConsultation.patientName,
-        hasPatientId: !!newConsultation.patientId,
-        audioUrlType: typeof newConsultation.audioUrl
-      });
+
+      try {
+        await sendToWebhook({
+          audio_url: audioUrl || "",
+          transcripcion: transcription,
+          resumen: summary
+        });
+
+        toast({
+          title: "Datos Enviados",
+          description: "Los datos se han enviado correctamente al webhook",
+        });
+      } catch (webhookError) {
+        console.error("Error al enviar al webhook:", webhookError);
+        toast({
+          title: "Error al Enviar Datos",
+          description: "No se pudieron enviar los datos al webhook externo",
+          variant: "destructive",
+        });
+      }
       
       const saveError = await saveConsultation(newConsultation);
       
