@@ -15,7 +15,7 @@ export const sendToWebhook = async (payload: WebhookPayload) => {
       payload.audio_url = "";
     }
     
-    const response = await fetch('https://n8n-1-o3cv.onrender.com/webhook/lovable-audio', {
+    const response = await fetch('https://n8nwebhook.botec.tech/webhook/lovable-audio', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
