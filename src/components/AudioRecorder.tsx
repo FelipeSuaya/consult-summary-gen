@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -64,6 +65,46 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
     }
   }, [selectedPatient]);
 
+  const getSupportedMimeTypes = () => {
+    // Tipos de MIME comunes para audio
+    const mimeTypes = [
+      'audio/webm',
+      'audio/webm;codecs=opus',
+      'audio/mp4',
+      'audio/mp4;codecs=opus',
+      'audio/ogg',
+      'audio/ogg;codecs=opus',
+      'audio/wav',
+      'audio/wav;codecs=1'
+    ];
+
+    // Verificar cuál es soportado
+    return mimeTypes.filter(mimeType => {
+      try {
+        return MediaRecorder.isTypeSupported(mimeType);
+      } catch (e) {
+        return false;
+      }
+    });
+  };
+
+  const getBestMimeType = (): string | null => {
+    const supported = getSupportedMimeTypes();
+    console.log("Formatos de audio compatibles:", supported);
+    
+    if (supported.length === 0) {
+      console.error("No se encontraron formatos de audio compatibles");
+      return null;
+    }
+    
+    // Preferir webm si está disponible
+    const webmType = supported.find(type => type.includes('webm'));
+    if (webmType) return webmType;
+    
+    // De lo contrario, usar el primer formato compatible
+    return supported[0];
+  };
+
   const setupMediaRecorderErrorHandling = (mediaRecorder: MediaRecorder) => {
     mediaRecorder.onerror = (event: Event & { error?: Error }) => {
       const error = event.error || new Error("Error desconocido en la grabación");
@@ -118,100 +159,119 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       
-      const mediaRecorder = new MediaRecorder(stream, {mimeType: 'audio/webm;codecs=opus'});
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
+      // Determinar el formato MIME compatible
+      const mimeType = getBestMimeType();
+      if (!mimeType) {
+        throw new Error("No se encontró un formato de audio compatible con este dispositivo");
+      }
       
-      setupMediaRecorderErrorHandling(mediaRecorder);
+      console.log(`Usando formato de audio: ${mimeType}`);
       
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-          console.log(`Chunk collected: ${event.data.size} bytes. Total chunks: ${audioChunksRef.current.length}`);
-        }
+      // Configuración de opciones para MediaRecorder
+      const options: MediaRecorderOptions = {
+        mimeType: mimeType
       };
       
-      mediaRecorder.onstop = async () => {
-        if (recordingError) {
-          console.log("Recording stopped due to an error");
-          return;
-        }
+      try {
+        const mediaRecorder = new MediaRecorder(stream, options);
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
         
-        if (audioChunksRef.current.length === 0) {
-          setRecordingError("No se registraron datos de audio. Verifique que su micrófono está funcionando correctamente.");
-          toast({
-            title: "Error de Grabación",
-            description: "No se registraron datos de audio. Verifique que su micrófono está funcionando correctamente.",
-            variant: "destructive",
-          });
-          return;
-        }
+        setupMediaRecorderErrorHandling(mediaRecorder);
         
-        try {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          console.log(`Audio blob created: ${audioBlob.size} bytes`);
-          
-          if (audioBlob.size === 0) {
-            throw new Error("El archivo de audio está vacío");
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+            console.log(`Chunk collected: ${event.data.size} bytes. Total chunks: ${audioChunksRef.current.length}`);
+          }
+        };
+        
+        mediaRecorder.onstop = async () => {
+          if (recordingError) {
+            console.log("Recording stopped due to an error");
+            return;
           }
           
-          const url = URL.createObjectURL(audioBlob);
-          setAudioUrl(url);
-          
-          if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
-          }
-          
-          await processRecording(audioBlob);
-        } catch (error) {
-          console.error("Error processing recording:", error);
-          setRecordingError(`Error al procesar la grabación: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-          toast({
-            title: "Error de Procesamiento",
-            description: `Error al procesar la grabación: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-            variant: "destructive",
-          });
-        }
-      };
-      
-      mediaRecorder.start(1000);
-      setIsRecording(true);
-      setRecordingTime(0);
-      
-      timerRef.current = window.setInterval(() => {
-        setRecordingTime(prev => {
-          if (prev + 1 >= MAX_RECORDING_TIME) {
-            stopRecording();
+          if (audioChunksRef.current.length === 0) {
+            setRecordingError("No se registraron datos de audio. Verifique que su micrófono está funcionando correctamente.");
             toast({
-              title: "Límite de Tiempo Alcanzado",
-              description: "Se ha alcanzado el límite máximo de grabación de 30 minutos.",
-              variant: "default"
+              title: "Error de Grabación",
+              description: "No se registraron datos de audio. Verifique que su micrófono está funcionando correctamente.",
+              variant: "destructive",
             });
-            return prev;
+            return;
           }
-          return prev + 1;
-        });
-        
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'recording') {
-          console.warn("MediaRecorder is no longer recording");
-          setRecordingError("La grabación se detuvo inesperadamente. Por favor intente nuevamente.");
           
-          toast({
-            title: "Error de Grabación",
-            description: "La grabación se detuvo inesperadamente. Por favor intente nuevamente.",
-            variant: "destructive",
+          try {
+            // Usar el mismo tipo MIME para el Blob que se usó para grabar
+            const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+            console.log(`Audio blob created: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
+            
+            if (audioBlob.size === 0) {
+              throw new Error("El archivo de audio está vacío");
+            }
+            
+            const url = URL.createObjectURL(audioBlob);
+            setAudioUrl(url);
+            
+            if (streamRef.current) {
+              streamRef.current.getTracks().forEach(track => track.stop());
+            }
+            
+            await processRecording(audioBlob);
+          } catch (error) {
+            console.error("Error processing recording:", error);
+            setRecordingError(`Error al procesar la grabación: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+            toast({
+              title: "Error de Procesamiento",
+              description: `Error al procesar la grabación: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+              variant: "destructive",
+            });
+          }
+        };
+        
+        mediaRecorder.start(1000);
+        setIsRecording(true);
+        setRecordingTime(0);
+        
+        timerRef.current = window.setInterval(() => {
+          setRecordingTime(prev => {
+            if (prev + 1 >= MAX_RECORDING_TIME) {
+              stopRecording();
+              toast({
+                title: "Límite de Tiempo Alcanzado",
+                description: "Se ha alcanzado el límite máximo de grabación de 30 minutos.",
+                variant: "default"
+              });
+              return prev;
+            }
+            return prev + 1;
           });
           
-          clearInterval(timerRef.current!);
-          timerRef.current = null;
-          setIsRecording(false);
-        }
-      }, 1000);
-      
-      toast({
-        title: "Grabación Iniciada",
-        description: "La consulta está siendo grabada",
-      });
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'recording') {
+            console.warn("MediaRecorder is no longer recording");
+            setRecordingError("La grabación se detuvo inesperadamente. Por favor intente nuevamente.");
+            
+            toast({
+              title: "Error de Grabación",
+              description: "La grabación se detuvo inesperadamente. Por favor intente nuevamente.",
+              variant: "destructive",
+            });
+            
+            clearInterval(timerRef.current!);
+            timerRef.current = null;
+            setIsRecording(false);
+          }
+        }, 1000);
+        
+        toast({
+          title: "Grabación Iniciada",
+          description: "La consulta está siendo grabada",
+        });
+      } catch (mimeError) {
+        console.error("Error al inicializar el MediaRecorder con el formato seleccionado:", mimeError);
+        throw new Error(`Formato de audio no compatible: ${mimeType}. Por favor intente con otro navegador.`);
+      }
     } catch (error) {
       console.error("Error al acceder al micrófono:", error);
       setRecordingError(`Error al acceder al micrófono: ${error instanceof Error ? error.message : 'Error desconocido'}`);
