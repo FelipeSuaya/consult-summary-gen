@@ -8,14 +8,15 @@ type WebhookPayload = {
 
 export const sendToWebhook = async (payload: WebhookPayload) => {
   try {
-    console.log("Enviando datos al webhook");
+    console.log("Enviando datos al webhook n8n");
     
     // Asegurarse de que el audio_url no sea null
     if (!payload.audio_url) {
       payload.audio_url = "";
     }
     
-    const response = await fetch('https://n8nwebhook.botec.tech/webhook/lovable-audio', {
+    // Usar directamente la nueva URL de webhook
+    const response = await fetch('https://n8n-1-o3cv.onrender.com/webhook/lovable-audio', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -47,4 +48,3 @@ export const sendToWebhook = async (payload: WebhookPayload) => {
     };
   }
 };
-

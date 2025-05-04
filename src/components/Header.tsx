@@ -1,40 +1,12 @@
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
-import { Settings, MicOff, User, LogOut } from "lucide-react";
-import ApiKeyDialog from "./ApiKeyDialog";
-import { groqApi } from "@/lib/api";
+import { MicOff, User, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 
 const Header = () => {
-  const [apiDialogOpen, setApiDialogOpen] = useState(false);
-  const [hasApiKey, setHasApiKey] = useState(false);
   const { user, logout } = useAuth();
-
-  useEffect(() => {
-    // Verificar si hay una clave API almacenada
-    const storedApiKey = localStorage.getItem("groqApiKey");
-    if (storedApiKey) {
-      groqApi.setApiKey(storedApiKey);
-      setHasApiKey(true);
-    } else {
-      // Si no se encuentra la clave API en localStorage, intentar obtener la compartida
-      const fetchSharedKey = async () => {
-        const sharedKey = await groqApi.fetchSharedApiKey();
-        if (sharedKey) {
-          groqApi.setApiKey(sharedKey);
-          setHasApiKey(true);
-        } else {
-          setApiDialogOpen(true);
-        }
-      };
-      
-      if (user) {
-        fetchSharedKey();
-      }
-    }
-  }, [user]);
 
   const handleLogout = async () => {
     await logout();
@@ -52,17 +24,10 @@ const Header = () => {
         
         <div className="flex items-center gap-2">
           {user ? (
-            <>
-              <Button variant="ghost" size="sm" onClick={() => setApiDialogOpen(true)}>
-                <Settings className="h-4 w-4 mr-2" />
-                {hasApiKey ? "API Configurada" : "Configurar API"}
-              </Button>
-              
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Cerrar Sesión
-              </Button>
-            </>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Cerrar Sesión
+            </Button>
           ) : (
             <Button variant="outline" size="sm" asChild>
               <Link to="/auth">
@@ -72,8 +37,6 @@ const Header = () => {
             </Button>
           )}
         </div>
-        
-        <ApiKeyDialog open={apiDialogOpen} onOpenChange={setApiDialogOpen} />
       </div>
     </header>
   );
