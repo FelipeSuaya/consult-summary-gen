@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -141,15 +140,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       toast({
         title: "Nombre del paciente requerido",
         description: "Por favor ingrese el nombre del paciente antes de grabar",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!groqApi.hasApiKey()) {
-      toast({
-        title: "API Key Requerida",
-        description: "Por favor configure la API key de Groq primero",
         variant: "destructive",
       });
       return;

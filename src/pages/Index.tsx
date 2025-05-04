@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import AudioRecorder from "@/components/AudioRecorder";
@@ -5,7 +6,6 @@ import ConsultationsList from "@/components/ConsultationsList";
 import ConsultationDetail from "@/components/ConsultationDetail";
 import PatientsList from "@/components/PatientsList";
 import { ConsultationRecord, Patient } from "@/types";
-import { groqApi } from "@/lib/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ensureConsultationAudiosBucket } from "@/lib/ensureStorageBucket";
 import { useToast } from "@/components/ui/use-toast";
