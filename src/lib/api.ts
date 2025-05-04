@@ -1,4 +1,3 @@
-
 import { ApiResponse } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -12,10 +11,8 @@ interface Prompt {
   updated_at: string;
 }
 
-// Esta clase usará la API key compartida desde Supabase
+// Esta clase ahora está simplificada ya que todo el procesamiento ocurre en n8n
 export class GroqApiService {
-  private apiKey: string | null = null;
-  private baseUrl = "https://api.groq.com/openai/v1";
   private cachedSystemPrompt: string | null = null;
   
   // Dictionary of common medical term corrections
@@ -94,12 +91,6 @@ export class GroqApiService {
     "radiografía": "radiografía",
     "radiografia": "radiografía"
   };
-
-  constructor(apiKey?: string) {
-    if (apiKey) {
-      this.apiKey = apiKey;
-    }
-  }
 
   // Correct medical terms in a text
   correctMedicalTerms(text: string): string {
@@ -304,190 +295,6 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
       console.error("Error al configurar el prompt estandarizado:", error);
       throw error;
     }
-  }
-
-  async fetchSharedApiKey(): Promise<string | null> {
-    try {
-      const { data, error } = await supabase
-        .from('shared_api_keys')
-        .select('api_key')
-        .eq('service_name', 'groq')
-        .single();
-
-      if (error) {
-        console.error("Error al obtener la clave API compartida:", error);
-        return null;
-      }
-
-      return data?.api_key || null;
-    } catch (error) {
-      console.error("Error en fetchSharedApiKey:", error);
-      return null;
-    }
-  }
-
-  setApiKey(apiKey: string): void {
-    this.apiKey = apiKey;
-  }
-
-  getApiKey(): string | null {
-    return this.apiKey;
-  }
-
-  hasApiKey(): boolean {
-    return this.apiKey !== null && this.apiKey.trim() !== '';
-  }
-
-  // Enhanced transcribe audio method with improved medical term correction
-  async transcribeAudio(audioBlob: Blob): Promise<ApiResponse> {
-    // Si no hay API key, intentar obtenerla de Supabase
-    if (!this.hasApiKey()) {
-      const sharedKey = await this.fetchSharedApiKey();
-      if (sharedKey) {
-        this.setApiKey(sharedKey);
-      } else {
-        return { success: false, error: "No se pudo obtener la clave API" };
-      }
-    }
-
-    try {
-      const formData = new FormData();
-      formData.append("file", audioBlob, "recording.webm");
-      formData.append("model", "whisper-large-v3");
-
-      const response = await fetch(`${this.baseUrl}/audio/transcriptions`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          // No Content-Type header for FormData
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        return { success: false, error: errorData.error?.message || "La transcripción falló" };
-      }
-
-      const data = await response.json();
-      
-      // Apply comprehensive medical term correction to the transcription
-      if (data.text) {
-        data.text = this.correctMedicalTerms(data.text);
-      }
-      
-      return { success: true, data };
-    } catch (error) {
-      console.error("Error de transcripción:", error);
-      return { success: false, error: "No se pudo transcribir el audio" };
-    }
-  }
-
-  // Enhanced generate summary method that ensures proper structured format
-  async generateSummary(transcription: string): Promise<ApiResponse> {
-    // Si no hay API key, intentar obtenerla de Supabase
-    if (!this.hasApiKey()) {
-      const sharedKey = await this.fetchSharedApiKey();
-      if (sharedKey) {
-        this.setApiKey(sharedKey);
-      } else {
-        return { success: false, error: "No se pudo obtener la clave API" };
-      }
-    }
-
-    try {
-      // Apply medical term correction to the transcription before sending to LLM
-      const correctedTranscription = this.correctMedicalTerms(transcription);
-      
-      // Get the system prompt from the database - this now ensures the standardized format
-      const systemPrompt = await this.getSystemPrompt();
-      
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "llama3-70b-8192",
-          messages: [
-            {
-              role: "system",
-              content: systemPrompt
-            },
-            {
-              role: "user",
-              content: correctedTranscription
-            }
-          ],
-          temperature: 0.2, // Lower temperature for more consistent and structured output
-          max_tokens: 1500 // Increased for more comprehensive summaries
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        return { success: false, error: errorData.error?.message || "La generación del resumen falló" };
-      }
-
-      const data = await response.json();
-      
-      // Apply any additional corrections to the summary response and ensure lab tables are formatted correctly
-      if (data.choices && data.choices[0]?.message?.content) {
-        let summarizedContent = data.choices[0].message.content;
-        
-        // First correct any medical terms
-        summarizedContent = this.correctMedicalTerms(summarizedContent);
-        
-        // Ensure laboratory values are properly formatted as tables
-        summarizedContent = this.ensureLabResultsInTables(summarizedContent);
-        
-        data.choices[0].message.content = summarizedContent;
-      }
-      
-      return { success: true, data };
-    } catch (error) {
-      console.error("Error en la generación del resumen:", error);
-      return { success: false, error: "No se pudo generar el resumen" };
-    }
-  }
-  
-  // Helper method to ensure laboratory results are properly formatted as tables
-  private ensureLabResultsInTables(text: string): string {
-    // Find sections that might contain laboratory results
-    const labSections = text.match(/Laboratorio:[\s\S]*?((?=\n\n)|$)/g) || [];
-    
-    for (const section of labSections) {
-      // Skip if section already contains a table
-      if (section.includes('|')) continue;
-      
-      // Extract potential laboratory values (e.g., "Glucose: 120 mg/dl")
-      const labLines = section.split('\n').filter(line => 
-        line.match(/[a-zA-Z]+:?\s+\d+\.?\d*\s*[a-zA-Z\/]+/i)
-      );
-      
-      if (labLines.length) {
-        // Create table header
-        let tableText = '\n| Parámetro | Resultado | Valor de referencia |\n';
-        tableText += '| --------- | --------- | ------------------ |\n';
-        
-        // Add each lab result as a row
-        for (const line of labLines) {
-          const match = line.match(/([a-zA-Z\s]+):?\s+(\d+\.?\d*\s*[a-zA-Z\/]+)/i);
-          if (match) {
-            const parameter = match[1].trim();
-            const result = match[2].trim();
-            // We don't have reference values from the raw text, so leaving it empty
-            tableText += `| ${parameter} | ${result} | - |\n`;
-          }
-        }
-        
-        // Replace the lab section with the new table
-        text = text.replace(section, `Laboratorio:\n${tableText}`);
-      }
-    }
-    
-    return text;
   }
 
   // Extract patient data from the summary

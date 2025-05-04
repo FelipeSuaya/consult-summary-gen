@@ -21,11 +21,6 @@ const Index = () => {
   } = useToast();
 
   useEffect(() => {
-    const storedApiKey = localStorage.getItem("groqApiKey");
-    if (storedApiKey) {
-      groqApi.setApiKey(storedApiKey);
-    }
-
     ensureConsultationAudiosBucket().then(() => {
       console.log("Storage bucket check completed successfully");
     }).catch(error => {
