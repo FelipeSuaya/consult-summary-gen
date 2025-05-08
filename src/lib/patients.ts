@@ -62,9 +62,10 @@ export const savePatient = async (patient: Omit<Patient, "id"> & { id?: string }
 };
 
 // Obtener todos los pacientes del usuario actual
-export const getPatients = async (): Promise<Patient[]> => {
+export const getPatients = async (startDate?: Date, endDate?: Date): Promise<Patient[]> => {
   try {
-    const { data, error } = await supabase
+    // Obtenemos todos los pacientes
+    const { data: patients, error } = await supabase
       .from('patients')
       .select('*')
       .order('name');
@@ -73,16 +74,57 @@ export const getPatients = async (): Promise<Patient[]> => {
       console.error("Error al obtener pacientes:", error);
       return [];
     }
+
+    // Para cada paciente, obtenemos su primera consulta
+    const patientsWithFirstConsultation = await Promise.all(
+      patients.map(async (patient) => {
+        const { data: consultations, error: consultationsError } = await supabase
+          .from('consultations')
+          .select('date_time')
+          .eq('patient_id', patient.id)
+          .order('date_time', { ascending: true })
+          .limit(1);
+
+        let firstConsultationDate = null;
+        if (!consultationsError && consultations && consultations.length > 0) {
+          firstConsultationDate = consultations[0].date_time;
+        }
+
+        return {
+          id: patient.id,
+          name: patient.name,
+          dni: patient.dni,
+          phone: patient.phone,
+          age: patient.age,
+          email: patient.email,
+          notes: patient.notes,
+          firstConsultationDate
+        };
+      })
+    );
+
+    // Filtramos por fecha si se proporcionaron fechas
+    let filteredPatients = patientsWithFirstConsultation;
     
-    return data.map(item => ({
-      id: item.id,
-      name: item.name,
-      dni: item.dni,
-      phone: item.phone,
-      age: item.age,
-      email: item.email,
-      notes: item.notes
-    })) || [];
+    if (startDate || endDate) {
+      filteredPatients = patientsWithFirstConsultation.filter(patient => {
+        if (!patient.firstConsultationDate) return false;
+        
+        const consultDate = new Date(patient.firstConsultationDate);
+        
+        if (startDate && endDate) {
+          return consultDate >= startDate && consultDate <= endDate;
+        } else if (startDate) {
+          return consultDate >= startDate;
+        } else if (endDate) {
+          return consultDate <= endDate;
+        }
+        
+        return true;
+      });
+    }
+    
+    return filteredPatients;
   } catch (error) {
     console.error("Error en getPatients:", error);
     return [];

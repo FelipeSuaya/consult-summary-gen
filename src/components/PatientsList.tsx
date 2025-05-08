@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Patient } from "@/types";
@@ -5,15 +6,18 @@ import { getPatients, deletePatient } from "@/lib/patients";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { UserPlus, Search, Trash2, Phone, Mail, ChevronDown, ChevronUp, Stethoscope, User } from "lucide-react";
+import { UserPlus, Search, Trash2, Phone, Mail, ChevronDown, ChevronUp, Stethoscope, User, Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { savePatient } from "@/lib/patients";
 import PatientConsultations from "@/components/PatientConsultations";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import DateFilter from "@/components/DateFilter";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface PatientsListProps {
   onStartConsultation?: (patient: Patient) => void;
@@ -28,27 +32,52 @@ const PatientsList = ({
   const [showNewPatientDialog, setShowNewPatientDialog] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [expandedPatient, setExpandedPatient] = useState<string | null>(null);
-  const {
-    toast
-  } = useToast();
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [sortByDateAscending, setSortByDateAscending] = useState<boolean>(false);
+  
+  const { toast } = useToast();
+  
   const {
     data: patients = [],
     isLoading,
     error,
     refetch
   } = useQuery({
-    queryKey: ['patients'],
-    queryFn: getPatients
+    queryKey: ['patients', startDate, endDate],
+    queryFn: () => getPatients(startDate, endDate)
   });
 
   useEffect(() => {
     if (searchTerm.trim() === "") {
-      setFilteredPatients(patients);
+      // Sort patients by first consultation date if available
+      let sortedPatients = [...patients];
+      
+      if (sortByDateAscending) {
+        sortedPatients.sort((a, b) => {
+          // Handle cases where firstConsultationDate might be undefined
+          if (!a.firstConsultationDate) return 1;
+          if (!b.firstConsultationDate) return -1;
+          return new Date(a.firstConsultationDate).getTime() - new Date(b.firstConsultationDate).getTime();
+        });
+      } else {
+        sortedPatients.sort((a, b) => {
+          // Handle cases where firstConsultationDate might be undefined
+          if (!a.firstConsultationDate) return 1;
+          if (!b.firstConsultationDate) return -1;
+          return new Date(b.firstConsultationDate).getTime() - new Date(a.firstConsultationDate).getTime();
+        });
+      }
+      
+      setFilteredPatients(sortedPatients);
     } else {
-      const filtered = patients.filter(patient => patient.name.toLowerCase().includes(searchTerm.toLowerCase()) || patient.dni && patient.dni.toLowerCase().includes(searchTerm.toLowerCase()));
+      const filtered = patients.filter(patient => 
+        patient.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (patient.dni && patient.dni.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
       setFilteredPatients(filtered);
     }
-  }, [searchTerm, patients]);
+  }, [searchTerm, patients, sortByDateAscending]);
 
   const handleDeletePatient = async () => {
     if (patientToDelete) {
@@ -132,6 +161,15 @@ const PatientsList = ({
     }
   };
 
+  const handleDateChange = (start: Date | undefined, end: Date | undefined) => {
+    setStartDate(start);
+    setEndDate(end);
+  };
+
+  const toggleSortDirection = () => {
+    setSortByDateAscending(!sortByDateAscending);
+  };
+
   if (isLoading) {
     return <Card>
         <CardHeader>
@@ -173,7 +211,7 @@ const PatientsList = ({
       </CardHeader>
       <CardContent className="bg-white/10 backdrop-blur-sm">
         <div className="space-y-4">
-          <div className="relative mb-6">
+          <div className="relative mb-2">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-medical-400" />
             <Input 
               placeholder="Buscar paciente por nombre o DNI..." 
@@ -183,7 +221,14 @@ const PatientsList = ({
             />
           </div>
 
-          <div className="space-y-4">
+          <DateFilter 
+            onDateChange={handleDateChange} 
+            onSortToggle={toggleSortDirection}
+            sortAscending={sortByDateAscending}
+            showSortToggle={true}
+          />
+
+          <div className="space-y-4 mt-4">
             {filteredPatients.length === 0 ? (
               <div className="text-center py-4 text-medical-700 bg-medical-50 rounded-lg">
                 No se encontraron pacientes con el criterio de búsqueda.
@@ -197,7 +242,6 @@ const PatientsList = ({
                   <div className="flex justify-between items-start">
                     <div className="flex items-center space-x-4">
                       <Avatar className="h-12 w-12">
-                        <AvatarImage src="" alt={patient.name} />
                         <AvatarFallback className="bg-medical-100 text-medical-700">
                           <User className="h-6 w-6" />
                         </AvatarFallback>
@@ -205,6 +249,14 @@ const PatientsList = ({
                       <div>
                         <h3 className="font-semibold text-medical-900">{patient.name}</h3>
                         {patient.dni && <p className="text-sm text-medical-700">DNI: {patient.dni}</p>}
+                        <div className="mt-1">
+                          {patient.firstConsultationDate && (
+                            <div className="flex items-center text-sm text-medical-600">
+                              <Calendar className="h-3.5 w-3.5 mr-1 text-medical-500" />
+                              Primera consulta: {format(new Date(patient.firstConsultationDate), "dd/MM/yyyy", { locale: es })}
+                            </div>
+                          )}
+                        </div>
                         <div className="mt-2 flex flex-wrap gap-2 text-sm text-medical-800">
                           {patient.phone && (
                             <div className="flex items-center bg-medical-100 px-2 py-1 rounded-full">
