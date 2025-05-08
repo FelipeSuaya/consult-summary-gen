@@ -28,13 +28,13 @@ const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => 
   const [symptomsData, setSymptomsData] = useState<any[]>([]);
   const [diagnosisData, setDiagnosisData] = useState<any[]>([]);
   
-  // Get patients list
+  // Get patients list - Fixed the query function to properly handle the context parameter
   const { 
     data: patients = [],
     isLoading: isLoadingPatients
   } = useQuery({
     queryKey: ['patients', user?.id],
-    queryFn: getPatients,
+    queryFn: () => getPatients(),
     enabled: !!user,
   });
 
