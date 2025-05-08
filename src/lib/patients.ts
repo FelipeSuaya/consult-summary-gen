@@ -62,78 +62,27 @@ export const savePatient = async (patient: Omit<Patient, "id"> & { id?: string }
 };
 
 // Obtener todos los pacientes del usuario actual
-export const getPatients = async (startDate?: Date, endDate?: Date): Promise<Patient[]> => {
+export const getPatients = async (): Promise<Patient[]> => {
   try {
-    // Primero obtenemos todos los pacientes
-    const { data: patientsData, error: patientsError } = await supabase
+    const { data, error } = await supabase
       .from('patients')
       .select('*')
       .order('name');
     
-    if (patientsError) {
-      console.error("Error al obtener pacientes:", patientsError);
+    if (error) {
+      console.error("Error al obtener pacientes:", error);
       return [];
     }
     
-    // Convertimos los datos a nuestro formato Patient
-    const patients = patientsData.map(item => ({
+    return data.map(item => ({
       id: item.id,
       name: item.name,
       dni: item.dni,
       phone: item.phone,
       age: item.age,
       email: item.email,
-      notes: item.notes,
-      firstConsultationDate: null as string | null // Inicializamos con null
-    }));
-    
-    // Para cada paciente, buscamos su primera consulta
-    const patientsWithConsultations = await Promise.all(
-      patients.map(async (patient) => {
-        const { data: consultations, error: consultationsError } = await supabase
-          .from('consultations')
-          .select('date_time')
-          .eq('patient_id', patient.id)
-          .order('date_time', { ascending: true })
-          .limit(1);
-        
-        if (consultationsError || !consultations || consultations.length === 0) {
-          return patient; // Retornamos el paciente sin fecha de primera consulta
-        }
-        
-        return {
-          ...patient,
-          firstConsultationDate: consultations[0].date_time
-        };
-      })
-    );
-    
-    // Aplicar filtros de fecha si están presentes
-    let filteredPatients = [...patientsWithConsultations];
-    
-    if (startDate) {
-      const startDateTime = new Date(startDate);
-      startDateTime.setHours(0, 0, 0, 0);
-      
-      filteredPatients = filteredPatients.filter(patient => {
-        if (!patient.firstConsultationDate) return false;
-        const consultDate = new Date(patient.firstConsultationDate);
-        return consultDate >= startDateTime;
-      });
-    }
-    
-    if (endDate) {
-      const endDateTime = new Date(endDate);
-      endDateTime.setHours(23, 59, 59, 999);
-      
-      filteredPatients = filteredPatients.filter(patient => {
-        if (!patient.firstConsultationDate) return false;
-        const consultDate = new Date(patient.firstConsultationDate);
-        return consultDate <= endDateTime;
-      });
-    }
-    
-    return filteredPatients;
+      notes: item.notes
+    })) || [];
   } catch (error) {
     console.error("Error en getPatients:", error);
     return [];

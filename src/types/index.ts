@@ -29,5 +29,4 @@ export interface Patient {
   age?: string;
   email?: string;
   notes?: string;
-  firstConsultationDate?: string | null;
 }

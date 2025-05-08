@@ -5,10 +5,7 @@ import { getPatients, deletePatient } from "@/lib/patients";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { 
-  UserPlus, Search, Trash2, Phone, Mail, ChevronDown, 
-  ChevronUp, Stethoscope, User, Calendar, SortDesc, SortAsc 
-} from "lucide-react";
+import { UserPlus, Search, Trash2, Phone, Mail, ChevronDown, ChevronUp, Stethoscope, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -17,9 +14,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { savePatient } from "@/lib/patients";
 import PatientConsultations from "@/components/PatientConsultations";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import DateFilter from "@/components/DateFilter";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 
 interface PatientsListProps {
   onStartConsultation?: (patient: Patient) => void;
@@ -34,48 +28,27 @@ const PatientsList = ({
   const [showNewPatientDialog, setShowNewPatientDialog] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [expandedPatient, setExpandedPatient] = useState<string | null>(null);
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc'); // 'desc' para mostrar los más recientes primero
-  
-  const { toast } = useToast();
-  
+  const {
+    toast
+  } = useToast();
   const {
     data: patients = [],
     isLoading,
     error,
     refetch
   } = useQuery({
-    queryKey: ['patients', startDate, endDate],
-    queryFn: () => getPatients(startDate, endDate)
+    queryKey: ['patients'],
+    queryFn: getPatients
   });
 
   useEffect(() => {
     if (searchTerm.trim() === "") {
-      // Ordenar pacientes según la fecha de primera consulta
-      const sortedPatients = [...patients].sort((a, b) => {
-        // Si ambos tienen fecha, comparamos normalmente
-        if (a.firstConsultationDate && b.firstConsultationDate) {
-          const dateA = new Date(a.firstConsultationDate);
-          const dateB = new Date(b.firstConsultationDate);
-          return sortOrder === 'desc' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
-        }
-        // Si solo uno tiene fecha, ese va primero
-        if (a.firstConsultationDate) return sortOrder === 'desc' ? -1 : 1;
-        if (b.firstConsultationDate) return sortOrder === 'desc' ? 1 : -1;
-        // Si ninguno tiene fecha, ordenamos por nombre
-        return a.name.localeCompare(b.name);
-      });
-      
-      setFilteredPatients(sortedPatients);
+      setFilteredPatients(patients);
     } else {
-      const filtered = patients.filter(patient => 
-        patient.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        patient.dni && patient.dni.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const filtered = patients.filter(patient => patient.name.toLowerCase().includes(searchTerm.toLowerCase()) || patient.dni && patient.dni.toLowerCase().includes(searchTerm.toLowerCase()));
       setFilteredPatients(filtered);
     }
-  }, [searchTerm, patients, sortOrder]);
+  }, [searchTerm, patients]);
 
   const handleDeletePatient = async () => {
     if (patientToDelete) {
@@ -158,15 +131,6 @@ const PatientsList = ({
       setExpandedPatient(patientId);
     }
   };
-  
-  const resetFilters = () => {
-    setStartDate(undefined);
-    setEndDate(undefined);
-  };
-  
-  const toggleSortOrder = () => {
-    setSortOrder(prevOrder => prevOrder === 'asc' ? 'desc' : 'asc');
-  };
 
   if (isLoading) {
     return <Card>
@@ -193,7 +157,7 @@ const PatientsList = ({
         <div>
           <CardTitle className="text-white text-2xl font-bold tracking-tight">Pacientes</CardTitle>
           <CardDescription className="text-white/90">
-            {filteredPatients.length} paciente{filteredPatients.length !== 1 ? 's' : ''} registrado{filteredPatients.length !== 1 ? 's' : ''}
+            {patients.length} paciente{patients.length !== 1 ? 's' : ''} registrado{patients.length !== 1 ? 's' : ''}
           </CardDescription>
         </div>
         <div className="flex space-x-2">
@@ -209,43 +173,14 @@ const PatientsList = ({
       </CardHeader>
       <CardContent className="bg-white/10 backdrop-blur-sm">
         <div className="space-y-4">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-medical-400" />
-              <Input 
-                placeholder="Buscar paciente por nombre o DNI..." 
-                value={searchTerm} 
-                onChange={e => setSearchTerm(e.target.value)} 
-                className="pl-8 border-medical-300 focus:ring-medical-500 transition-all text-medical-900 placeholder-medical-600"
-              />
-            </div>
-            
-            <div className="flex flex-col gap-2 md:flex-row md:items-center">
-              <DateFilter
-                startDate={startDate}
-                endDate={endDate}
-                onStartDateChange={setStartDate}
-                onEndDateChange={setEndDate}
-                onReset={resetFilters}
-              />
-              
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={toggleSortOrder}
-                className="ml-2 whitespace-nowrap"
-              >
-                {sortOrder === 'desc' ? (
-                  <>
-                    <SortDesc className="h-4 w-4 mr-1" /> Más recientes primero
-                  </>
-                ) : (
-                  <>
-                    <SortAsc className="h-4 w-4 mr-1" /> Más antiguos primero
-                  </>
-                )}
-              </Button>
-            </div>
+          <div className="relative mb-6">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-medical-400" />
+            <Input 
+              placeholder="Buscar paciente por nombre o DNI..." 
+              value={searchTerm} 
+              onChange={e => setSearchTerm(e.target.value)} 
+              className="pl-8 border-medical-300 focus:ring-medical-500 transition-all text-medical-900 placeholder-medical-600"
+            />
           </div>
 
           <div className="space-y-4">
@@ -270,12 +205,6 @@ const PatientsList = ({
                       <div>
                         <h3 className="font-semibold text-medical-900">{patient.name}</h3>
                         {patient.dni && <p className="text-sm text-medical-700">DNI: {patient.dni}</p>}
-                        {patient.firstConsultationDate && (
-                          <div className="flex items-center text-xs text-medical-600 mt-1">
-                            <Calendar className="h-3 w-3 mr-1" />
-                            Primera consulta: {format(new Date(patient.firstConsultationDate), "dd MMM yyyy", { locale: es })}
-                          </div>
-                        )}
                         <div className="mt-2 flex flex-wrap gap-2 text-sm text-medical-800">
                           {patient.phone && (
                             <div className="flex items-center bg-medical-100 px-2 py-1 rounded-full">
