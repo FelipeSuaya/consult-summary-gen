@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Patient } from "@/types";
@@ -32,8 +31,6 @@ const PatientsList = ({
   const [showNewPatientDialog, setShowNewPatientDialog] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [expandedPatient, setExpandedPatient] = useState<string | null>(null);
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [sortByDateAscending, setSortByDateAscending] = useState<boolean>(false);
   
   const { toast } = useToast();
@@ -44,8 +41,8 @@ const PatientsList = ({
     error,
     refetch
   } = useQuery({
-    queryKey: ['patients', startDate, endDate],
-    queryFn: () => getPatients(startDate, endDate)
+    queryKey: ['patients'],
+    queryFn: () => getPatients()
   });
 
   useEffect(() => {
@@ -161,11 +158,6 @@ const PatientsList = ({
     }
   };
 
-  const handleDateChange = (start: Date | undefined, end: Date | undefined) => {
-    setStartDate(start);
-    setEndDate(end);
-  };
-
   const toggleSortDirection = () => {
     setSortByDateAscending(!sortByDateAscending);
   };
@@ -222,10 +214,8 @@ const PatientsList = ({
           </div>
 
           <DateFilter 
-            onDateChange={handleDateChange} 
             onSortToggle={toggleSortDirection}
             sortAscending={sortByDateAscending}
-            showSortToggle={true}
           />
 
           <div className="space-y-4 mt-4">

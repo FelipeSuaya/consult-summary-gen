@@ -1,4 +1,3 @@
-
 import { Patient } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -62,7 +61,7 @@ export const savePatient = async (patient: Omit<Patient, "id"> & { id?: string }
 };
 
 // Obtener todos los pacientes del usuario actual
-export const getPatients = async (startDate?: Date, endDate?: Date): Promise<Patient[]> => {
+export const getPatients = async (): Promise<Patient[]> => {
   try {
     // Obtenemos todos los pacientes
     const { data: patients, error } = await supabase
@@ -102,29 +101,8 @@ export const getPatients = async (startDate?: Date, endDate?: Date): Promise<Pat
         };
       })
     );
-
-    // Filtramos por fecha si se proporcionaron fechas
-    let filteredPatients = patientsWithFirstConsultation;
     
-    if (startDate || endDate) {
-      filteredPatients = patientsWithFirstConsultation.filter(patient => {
-        if (!patient.firstConsultationDate) return false;
-        
-        const consultDate = new Date(patient.firstConsultationDate);
-        
-        if (startDate && endDate) {
-          return consultDate >= startDate && consultDate <= endDate;
-        } else if (startDate) {
-          return consultDate >= startDate;
-        } else if (endDate) {
-          return consultDate <= endDate;
-        }
-        
-        return true;
-      });
-    }
-    
-    return filteredPatients;
+    return patientsWithFirstConsultation;
   } catch (error) {
     console.error("Error en getPatients:", error);
     return [];
