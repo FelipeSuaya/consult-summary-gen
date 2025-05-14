@@ -17,6 +17,7 @@ export interface Patient {
   firstConsultationDate?: string;
   consultationsCount?: number;
   lastConsultationDate?: string;
+  notes?: string;
 }
 
 export interface PatientResponse {
@@ -41,4 +42,9 @@ export interface ConsultationFilter {
   endDate?: Date;
   patientId?: string;
   sortDescending?: boolean;
+}
+
+export interface ApiResponse<T> {
+  data?: T;
+  error?: string;
 }
