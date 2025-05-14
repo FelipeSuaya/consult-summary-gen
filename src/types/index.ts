@@ -1,24 +1,10 @@
 
-export interface ConsultationRecord {
-  id: string;
-  patientName: string;
-  dateTime: string;
-  audioUrl?: string;
-  transcription?: string;
-  summary?: string;
-  patientData?: {
-    dni?: string;
-    phone?: string;
-    age?: string;
-    email?: string;
-  };
-  patientId?: string;
-}
-
-export interface ApiResponse {
-  success: boolean;
-  data?: any;
-  error?: string;
+export interface PatientData {
+  dni?: string;
+  phone?: string;
+  email?: string;
+  age?: string;
+  [key: string]: string | undefined;
 }
 
 export interface Patient {
@@ -26,8 +12,33 @@ export interface Patient {
   name: string;
   dni?: string;
   phone?: string;
-  age?: string;
   email?: string;
-  notes?: string;
+  age?: string;
   firstConsultationDate?: string;
+  consultationsCount?: number;
+  lastConsultationDate?: string;
+}
+
+export interface PatientResponse {
+  id?: string;
+  error?: string;
+}
+
+export interface ConsultationRecord {
+  id: string;
+  patientName: string;
+  dateTime: string;
+  audioUrl?: string;
+  transcription?: string;
+  summary?: string;
+  patientData?: PatientData;
+  patientId?: string;
+  status?: "completed" | "processing" | "failed";
+}
+
+export interface ConsultationFilter {
+  startDate?: Date;
+  endDate?: Date;
+  patientId?: string;
+  sortDescending?: boolean;
 }

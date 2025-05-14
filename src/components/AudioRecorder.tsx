@@ -1,7 +1,8 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, Square, Loader2, AlertTriangle } from "lucide-react";
+import { Mic, Square, Loader2, AlertTriangle, Save } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { groqApi } from "@/lib/api";
 import { Input } from "@/components/ui/input";
@@ -26,14 +27,24 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showPatientSelector, setShowPatientSelector] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
+  const [backupAudios, setBackupAudios] = useState<Blob[]>([]);
+  const [isBackupSaving, setIsBackupSaving] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [lastBackupTime, setLastBackupTime] = useState(0);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
+  const backupTimerRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const mediaStreamCheckerRef = useRef<number | null>(null);
   const { toast } = useToast();
 
-  const MAX_RECORDING_TIME = 30 * 60; // 30 minutes in seconds
+  const MAX_RECORDING_TIME = 30 * 60; // 30 minutos en segundos
+  const BACKUP_INTERVAL = 30; // Guardar segmentos cada 30 segundos
+  const MAX_RETRY_ATTEMPTS = 3; // Máximo número de reintentos
+  const MEDIA_STREAM_CHECK_INTERVAL = 5000; // Verificar el estado del stream cada 5 segundos
 
   useEffect(() => {
     if (preselectedPatient) {
@@ -44,25 +55,50 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
 
   useEffect(() => {
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-      
-      if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
-      }
-
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
+      cleanupResources();
     };
-  }, [audioUrl]);
+  }, []);
 
   useEffect(() => {
     if (selectedPatient) {
       setPatientName(selectedPatient.name);
     }
   }, [selectedPatient]);
+
+  // Limpieza de recursos
+  const cleanupResources = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    
+    if (backupTimerRef.current) {
+      clearInterval(backupTimerRef.current);
+      backupTimerRef.current = null;
+    }
+
+    if (mediaStreamCheckerRef.current) {
+      clearInterval(mediaStreamCheckerRef.current);
+      mediaStreamCheckerRef.current = null;
+    }
+    
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (err) {
+        console.error("Error al detener mediaRecorder:", err);
+      }
+    }
+  };
 
   const getSupportedMimeTypes = () => {
     // Tipos de MIME comunes para audio
@@ -104,36 +140,133 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
     return supported[0];
   };
 
+  const checkMediaStreamStatus = () => {
+    if (!streamRef.current) return;
+    
+    const tracks = streamRef.current.getAudioTracks();
+    if (!tracks || tracks.length === 0) {
+      handleStreamError(new Error("No se detectan pistas de audio en el stream"));
+      return;
+    }
+    
+    const track = tracks[0];
+    if (!track.enabled || !track.readyState || track.readyState === 'ended') {
+      handleStreamError(new Error("La pista de audio se ha detenido o deshabilitado"));
+      return;
+    }
+    
+    console.log("Estado del stream de audio:", track.readyState, "Habilitado:", track.enabled);
+  };
+
+  const handleStreamError = (error: Error) => {
+    console.error("Error en el stream de audio:", error);
+    
+    // Si todavía estamos grabando, intentar recuperarnos
+    if (isRecording && retryCount < MAX_RETRY_ATTEMPTS) {
+      attemptRecovery();
+    } else if (isRecording) {
+      // Si ya agotamos los reintentos, guardar lo que tengamos
+      handleRecordingFailure(error, true);
+    }
+  };
+
+  const attemptRecovery = async () => {
+    setRetryCount(prevCount => prevCount + 1);
+    
+    try {
+      // Guardar los chunks actuales antes de reintentar
+      if (audioChunksRef.current.length > 0) {
+        const currentAudioBlob = new Blob(audioChunksRef.current, { type: mediaRecorderRef.current?.mimeType || 'audio/webm' });
+        setBackupAudios(prev => [...prev, currentAudioBlob]);
+      }
+      
+      // Limpiar y reiniciar la grabación
+      cleanupResources();
+      
+      toast({
+        title: "Recuperando grabación",
+        description: `Reintento ${retryCount + 1}/${MAX_RETRY_ATTEMPTS}. Mantenga la ventana abierta.`,
+        variant: "default"
+      });
+      
+      // Pequeña pausa antes de reintentar
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      startRecording(true);
+    } catch (error) {
+      console.error("Error al intentar recuperar la grabación:", error);
+      handleRecordingFailure(error instanceof Error ? error : new Error(String(error)), true);
+    }
+  };
+
   const setupMediaRecorderErrorHandling = (mediaRecorder: MediaRecorder) => {
     mediaRecorder.onerror = (event: Event & { error?: Error }) => {
       const error = event.error || new Error("Error desconocido en la grabación");
       console.error("MediaRecorder error:", error);
-      setRecordingError(`Error en la grabación: ${error.message}`);
       
-      toast({
-        title: "Error de Grabación",
-        description: `Se ha producido un error durante la grabación: ${error.message}`,
-        variant: "destructive",
-      });
-      
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      
-      setIsRecording(false);
-      
-      try {
-        if (mediaRecorder.state !== 'inactive') {
-          mediaRecorder.stop();
-        }
-      } catch (stopError) {
-        console.error("Error stopping media recorder:", stopError);
+      // Solo manejamos el error aquí si no estamos intentando una recuperación
+      if (retryCount < MAX_RETRY_ATTEMPTS) {
+        attemptRecovery();
+      } else {
+        handleRecordingFailure(error, false);
       }
     };
   };
 
-  const startRecording = async () => {
+  const createBackup = () => {
+    if (!mediaRecorderRef.current || audioChunksRef.current.length === 0) return;
+    
+    try {
+      console.log("Creando backup de seguridad...");
+      setIsBackupSaving(true);
+      
+      // Crear un blob con los datos actuales para backup
+      const backupBlob = new Blob(audioChunksRef.current, { type: mediaRecorderRef.current.mimeType });
+      setBackupAudios(prev => [...prev, backupBlob]);
+      setLastBackupTime(recordingTime);
+      
+      toast({
+        title: "Respaldo creado",
+        description: `Respaldo de ${formatTime(recordingTime)} guardado localmente`,
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Error al crear backup:", error);
+    } finally {
+      setIsBackupSaving(false);
+    }
+  };
+
+  const setupBackupTimer = () => {
+    if (backupTimerRef.current) {
+      clearInterval(backupTimerRef.current);
+    }
+    
+    backupTimerRef.current = window.setInterval(() => {
+      if (recordingTime % BACKUP_INTERVAL === 0 && recordingTime > lastBackupTime) {
+        createBackup();
+      }
+    }, 1000);
+  };
+
+  const requestMicrophonePermission = async (): Promise<MediaStream> => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        } 
+      });
+      setHasPermission(true);
+      return stream;
+    } catch (error) {
+      setHasPermission(false);
+      console.error("Error al solicitar permisos de micrófono:", error);
+      throw error;
+    }
+  };
+
+  const startRecording = async (isRetry = false) => {
     setRecordingError(null);
     
     if (!patientName.trim()) {
@@ -145,8 +278,15 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       return;
     }
 
+    // Si no es un reintento, reiniciamos el contador
+    if (!isRetry) {
+      setRetryCount(0);
+      setBackupAudios([]);
+      setLastBackupTime(0);
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await requestMicrophonePermission();
       streamRef.current = stream;
       
       // Determinar el formato MIME compatible
@@ -165,98 +305,59 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       try {
         const mediaRecorder = new MediaRecorder(stream, options);
         mediaRecorderRef.current = mediaRecorder;
-        audioChunksRef.current = [];
+        
+        // Si es un reintento, mantenemos los chunks anteriores
+        if (!isRetry) {
+          audioChunksRef.current = [];
+        }
         
         setupMediaRecorderErrorHandling(mediaRecorder);
         
         mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
+          if (event.data && event.data.size > 0) {
             audioChunksRef.current.push(event.data);
             console.log(`Chunk collected: ${event.data.size} bytes. Total chunks: ${audioChunksRef.current.length}`);
           }
         };
         
         mediaRecorder.onstop = async () => {
-          if (recordingError) {
+          if (recordingError && !isRetry) {
             console.log("Recording stopped due to an error");
             return;
           }
           
-          if (audioChunksRef.current.length === 0) {
-            setRecordingError("No se registraron datos de audio. Verifique que su micrófono está funcionando correctamente.");
-            toast({
-              title: "Error de Grabación",
-              description: "No se registraron datos de audio. Verifique que su micrófono está funcionando correctamente.",
-              variant: "destructive",
-            });
-            return;
-          }
-          
           try {
-            // Usar el mismo tipo MIME para el Blob que se usó para grabar
-            const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-            console.log(`Audio blob created: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
-            
-            if (audioBlob.size === 0) {
-              throw new Error("El archivo de audio está vacío");
-            }
-            
-            const url = URL.createObjectURL(audioBlob);
-            setAudioUrl(url);
-            
-            if (streamRef.current) {
-              streamRef.current.getTracks().forEach(track => track.stop());
-            }
-            
-            await processRecording(audioBlob);
+            await finalizeRecording();
           } catch (error) {
-            console.error("Error processing recording:", error);
-            setRecordingError(`Error al procesar la grabación: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-            toast({
-              title: "Error de Procesamiento",
-              description: `Error al procesar la grabación: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-              variant: "destructive",
-            });
+            console.error("Error finalizando grabación:", error);
+            handleRecordingFailure(error instanceof Error ? error : new Error(String(error)), true);
           }
         };
         
+        // Comenzar la grabación pidiendo chunks cada segundo
         mediaRecorder.start(1000);
         setIsRecording(true);
-        setRecordingTime(0);
         
-        timerRef.current = window.setInterval(() => {
-          setRecordingTime(prev => {
-            if (prev + 1 >= MAX_RECORDING_TIME) {
-              stopRecording();
-              toast({
-                title: "Límite de Tiempo Alcanzado",
-                description: "Se ha alcanzado el límite máximo de grabación de 30 minutos.",
-                variant: "default"
-              });
-              return prev;
-            }
-            return prev + 1;
-          });
-          
-          if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'recording') {
-            console.warn("MediaRecorder is no longer recording");
-            setRecordingError("La grabación se detuvo inesperadamente. Por favor intente nuevamente.");
-            
-            toast({
-              title: "Error de Grabación",
-              description: "La grabación se detuvo inesperadamente. Por favor intente nuevamente.",
-              variant: "destructive",
-            });
-            
-            clearInterval(timerRef.current!);
-            timerRef.current = null;
-            setIsRecording(false);
-          }
-        }, 1000);
+        // Solo reiniciamos el tiempo si no es un reintento
+        if (!isRetry) {
+          setRecordingTime(0);
+        }
+        
+        // Configurar el timer para actualizar el tiempo
+        setupRecordingTimer();
+        
+        // Configurar timer de backup
+        setupBackupTimer();
+        
+        // Configurar verificación periódica del stream
+        if (mediaStreamCheckerRef.current) {
+          clearInterval(mediaStreamCheckerRef.current);
+        }
+        mediaStreamCheckerRef.current = window.setInterval(checkMediaStreamStatus, MEDIA_STREAM_CHECK_INTERVAL);
         
         toast({
           title: "Grabación Iniciada",
-          description: "La consulta está siendo grabada",
+          description: isRetry ? "Se ha reanudado la grabación" : "La consulta está siendo grabada",
         });
       } catch (mimeError) {
         console.error("Error al inicializar el MediaRecorder con el formato seleccionado:", mimeError);
@@ -273,16 +374,48 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
     }
   };
 
+  const setupRecordingTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    
+    timerRef.current = window.setInterval(() => {
+      setRecordingTime(prev => {
+        if (prev + 1 >= MAX_RECORDING_TIME) {
+          stopRecording();
+          toast({
+            title: "Límite de Tiempo Alcanzado",
+            description: "Se ha alcanzado el límite máximo de grabación de 30 minutos.",
+            variant: "default"
+          });
+          return prev;
+        }
+        return prev + 1;
+      });
+      
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'recording') {
+        console.warn("MediaRecorder is no longer recording");
+        
+        // Intentar recuperar si estamos por debajo del límite de intentos
+        if (retryCount < MAX_RETRY_ATTEMPTS) {
+          console.log("Intentando recuperar grabación interrumpida...");
+          attemptRecovery();
+        } else {
+          handleRecordingFailure(new Error("La grabación se detuvo inesperadamente"), false);
+        }
+      }
+    }, 1000);
+  };
+
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       try {
-        mediaRecorderRef.current.stop();
-        setIsRecording(false);
-        
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
+        if (mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop();
         }
+        
+        setIsRecording(false);
+        cleanupResources();
         
         toast({
           title: "Grabación Detenida",
@@ -290,13 +423,95 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         });
       } catch (error) {
         console.error("Error al detener la grabación:", error);
-        setRecordingError(`Error al detener la grabación: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-        toast({
-          title: "Error al Detener",
-          description: `No se pudo detener la grabación correctamente: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-          variant: "destructive",
-        });
+        handleRecordingFailure(error instanceof Error ? error : new Error(String(error)), true);
       }
+    }
+  };
+
+  const handleRecordingFailure = (error: Error, tryUseBackup: boolean) => {
+    console.error("Fallo en la grabación:", error);
+    setRecordingError(`Error en la grabación: ${error.message}`);
+    
+    // Detener timers y recursos
+    cleanupResources();
+    setIsRecording(false);
+    
+    // Si tenemos backups y debemos intentar usarlos
+    if (tryUseBackup && backupAudios.length > 0) {
+      toast({
+        title: "Recuperando grabación",
+        description: "Intentando recuperar datos desde la copia de seguridad",
+      });
+      
+      // Intentar usar el backup más reciente
+      processBackupRecording();
+    } else {
+      toast({
+        title: "Error de Grabación",
+        description: error.message || "La grabación se detuvo inesperadamente. Por favor intente nuevamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const finalizeRecording = async () => {
+    // Combinamos todos los chunks de audio (incluyendo backups si es necesario)
+    const allChunks = [...audioChunksRef.current];
+    
+    if (allChunks.length === 0) {
+      throw new Error("No se registraron datos de audio. Verifique que su micrófono está funcionando correctamente.");
+    }
+    
+    // Crear el blob final con el tipo MIME adecuado
+    const mimeType = mediaRecorderRef.current?.mimeType || 'audio/webm';
+    const audioBlob = new Blob(allChunks, { type: mimeType });
+    
+    if (audioBlob.size === 0) {
+      throw new Error("El archivo de audio está vacío");
+    }
+    
+    const url = URL.createObjectURL(audioBlob);
+    setAudioUrl(url);
+    
+    await processRecording(audioBlob);
+  };
+
+  const processBackupRecording = async () => {
+    if (backupAudios.length === 0) {
+      toast({
+        title: "Sin datos de respaldo",
+        description: "No hay datos de respaldo disponibles para recuperar.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      setIsProcessing(true);
+      
+      // Combinar todos los blobs de backup
+      const combinedBlob = new Blob(backupAudios, { type: backupAudios[0].type });
+      
+      if (combinedBlob.size === 0) {
+        throw new Error("Los datos de respaldo están vacíos");
+      }
+      
+      const url = URL.createObjectURL(combinedBlob);
+      setAudioUrl(url);
+      
+      toast({
+        title: "Usando datos de respaldo",
+        description: `Procesando ${backupAudios.length} segmentos de respaldo`,
+      });
+      
+      await processRecording(combinedBlob);
+    } catch (error) {
+      console.error("Error al procesar respaldo:", error);
+      toast({
+        title: "Error en el respaldo",
+        description: `No se pudo procesar el audio de respaldo: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -334,6 +549,46 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       });
       
       if (!webhookResponse.success) {
+        if (webhookResponse.pending) {
+          toast({
+            title: "Procesamiento en curso",
+            description: webhookResponse.message || "El audio se está procesando en segundo plano, puede tomar unos minutos.",
+            variant: "default",
+            duration: 10000,
+          });
+          
+          // Aún consideramos esto un éxito ya que se está procesando
+          const consultationId = crypto.randomUUID();
+          
+          const pendingConsultation: ConsultationRecord = {
+            id: consultationId,
+            patientName: patientName.trim(),
+            dateTime: new Date().toISOString(),
+            audioUrl: audioUrl || undefined,
+            transcription: "Procesando transcripción...",
+            summary: "Procesando resumen...",
+            patientData: {},
+            patientId: selectedPatient?.id,
+            status: "processing"
+          };
+          
+          // Guardamos la consulta como "en proceso"
+          const saveError = await saveConsultation(pendingConsultation);
+          
+          if (saveError) {
+            console.error("Error guardando consulta en proceso:", saveError);
+          } else {
+            onRecordingComplete(pendingConsultation);
+          }
+          
+          setPatientName("");
+          setAudioUrl(null);
+          setSelectedPatient(null);
+          setRecordingError(null);
+          setBackupAudios([]);
+          return;
+        }
+        
         throw new Error(webhookResponse.error || "Error en el procesamiento del audio");
       }
       
@@ -352,7 +607,8 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         transcription: transcripcion,
         summary: resumen,
         patientData,
-        patientId: selectedPatient?.id
+        patientId: selectedPatient?.id,
+        status: "completed"
       };
       
       const saveError = await saveConsultation(newConsultation);
@@ -374,6 +630,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       setAudioUrl(null);
       setSelectedPatient(null);
       setRecordingError(null);
+      setBackupAudios([]);
     } catch (error) {
       console.error("Error de procesamiento:", error);
       setRecordingError(`Error de procesamiento: ${error instanceof Error ? error.message : 'Error desconocido'}`);
@@ -396,6 +653,12 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   const handlePatientSelect = (patient: Patient) => {
     setSelectedPatient(patient);
     setShowPatientSelector(false);
+  };
+
+  const manualBackup = () => {
+    if (isRecording && !isBackupSaving) {
+      createBackup();
+    }
   };
 
   return (
@@ -444,9 +707,37 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
           {(isRecording || isProcessing) && (
             <div className="mt-4">
               {isRecording ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="h-3 w-3 rounded-full bg-red-500 animate-pulse-recording"></div>
-                  <span className="text-red-600 font-medium">Grabando: {formatTime(recordingTime)}</span>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="h-3 w-3 rounded-full bg-red-500 animate-pulse-recording"></div>
+                    <span className="text-red-600 font-medium">Grabando: {formatTime(recordingTime)}</span>
+                  </div>
+                  {backupAudios.length > 0 && (
+                    <div className="text-xs text-green-600 text-center">
+                      {backupAudios.length} respaldos guardados
+                    </div>
+                  )}
+                  <div className="flex justify-center">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={manualBackup}
+                      disabled={isBackupSaving}
+                      className="text-xs"
+                    >
+                      {isBackupSaving ? (
+                        <>
+                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          Guardando...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-1 h-3 w-3" />
+                          Crear respaldo manual
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="flex items-center justify-center space-x-2">
@@ -471,7 +762,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
               </Button>
             ) : (
               <Button 
-                onClick={startRecording} 
+                onClick={() => startRecording(false)} 
                 variant="default"
                 size="lg"
                 disabled={isProcessing || !patientName.trim()}
