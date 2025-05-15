@@ -9,6 +9,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      app_logs: {
+        Row: {
+          created_at: string
+          details: Json | null
+          id: string
+          level: string
+          message: string
+          source: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          id?: string
+          level: string
+          message: string
+          source: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          id?: string
+          level?: string
+          message?: string
+          source?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           client_id: string
@@ -364,7 +394,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      log: {
+        Args: {
+          p_user_id: string
+          p_level: string
+          p_source: string
+          p_message: string
+          p_details?: Json
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
