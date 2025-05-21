@@ -1,6 +1,5 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { ApiResponse } from "@/types";
 
 export type LogLevel = 'info' | 'warning' | 'error' | 'critical';
 
@@ -9,6 +8,11 @@ export interface LogEntry {
   source: string;
   message: string;
   details?: Record<string, any>;
+}
+
+export interface ApiResponse<T = any> {
+  data?: T;
+  error?: string;
 }
 
 /**
@@ -100,6 +104,62 @@ export class LoggingService {
       console.error('Error inesperado al obtener logs:', error);
       return { error: error instanceof Error ? error.message : 'Error desconocido' };
     }
+  }
+
+  /**
+   * Obtiene logs específicos de grabación de audio
+   * @param limit Número máximo de logs a obtener
+   * @returns Lista de logs relacionados con grabación de audio
+   */
+  static async getAudioRecordingLogs(limit = 50): Promise<ApiResponse<any[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('app_logs')
+        .select('*')
+        .eq('source', 'audio-recorder')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error('Error al obtener logs de grabación:', error);
+        return { error: error.message };
+      }
+
+      return { data };
+    } catch (error) {
+      console.error('Error inesperado al obtener logs de grabación:', error);
+      return { error: error instanceof Error ? error.message : 'Error desconocido' };
+    }
+  }
+
+  /**
+   * Registra un error de AudioRecorder con detalles específicos
+   * @param error Error que ocurrió
+   * @param details Detalles adicionales
+   * @returns Resultado de la operación
+   */
+  static async logAudioRecorderError(error: Error, details?: Record<string, any>): Promise<ApiResponse<{ id: string }>> {
+    // Capturar información del navegador y dispositivo
+    const browserInfo = {
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      vendor: navigator.vendor,
+      language: navigator.language,
+      deviceMemory: (navigator as any).deviceMemory || 'unknown',
+      hardwareConcurrency: navigator.hardwareConcurrency || 'unknown',
+      connection: (navigator as any).connection ? {
+        effectiveType: (navigator as any).connection.effectiveType,
+        downlink: (navigator as any).connection.downlink,
+        rtt: (navigator as any).connection.rtt,
+      } : 'unknown'
+    };
+
+    return this.error('audio-recorder', `Error de grabación: ${error.message}`, {
+      ...details,
+      errorStack: error.stack,
+      browserInfo,
+      timestamp: new Date().toISOString()
+    });
   }
 }
 

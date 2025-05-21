@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +11,7 @@ import { ConsultationRecord, Patient } from "@/types";
 import PatientSelector from "./PatientSelector";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { sendToWebhook } from "@/lib/webhooks";
+import { LoggingService } from "@/lib/logging";
 
 interface AudioRecorderProps {
   onRecordingComplete: (consultation: ConsultationRecord) => void;
@@ -54,8 +54,16 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   }, [preselectedPatient]);
 
   useEffect(() => {
+    // Log when component mounts
+    LoggingService.info('audio-recorder', 'Componente AudioRecorder inicializado', {
+      preselectedPatient: preselectedPatient ? { id: preselectedPatient.id, name: preselectedPatient.name } : null
+    }).catch(err => console.error('Error al registrar inicialización:', err));
+
     return () => {
       cleanupResources();
+      // Log when component unmounts
+      LoggingService.info('audio-recorder', 'Componente AudioRecorder desmontado')
+        .catch(err => console.error('Error al registrar desmontaje:', err));
     };
   }, []);
 
@@ -87,8 +95,18 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
     }
 
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
+      try {
+        streamRef.current.getTracks().forEach(track => {
+          track.stop();
+          console.log(`Pista de audio detenida. Estado: ${track.readyState}`);
+        });
+        streamRef.current = null;
+      } catch (err) {
+        console.error("Error al detener pistas de audio:", err);
+        LoggingService.error('audio-recorder', 'Error al detener pistas de audio', {
+          error: err instanceof Error ? err.message : String(err)
+        }).catch(console.error);
+      }
     }
 
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -143,23 +161,54 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   const checkMediaStreamStatus = () => {
     if (!streamRef.current) return;
     
-    const tracks = streamRef.current.getAudioTracks();
-    if (!tracks || tracks.length === 0) {
-      handleStreamError(new Error("No se detectan pistas de audio en el stream"));
-      return;
+    try {
+      const tracks = streamRef.current.getAudioTracks();
+      if (!tracks || tracks.length === 0) {
+        handleStreamError(new Error("No se detectan pistas de audio en el stream"));
+        return;
+      }
+      
+      const track = tracks[0];
+      if (!track.enabled || !track.readyState || track.readyState === 'ended') {
+        handleStreamError(new Error("La pista de audio se ha detenido o deshabilitado"));
+        return;
+      }
+      
+      console.log("Estado del stream de audio:", track.readyState, "Habilitado:", track.enabled);
+      
+      // Verificar si hay sonido detectado
+      if (mediaRecorderRef.current && typeof (mediaRecorderRef.current as any).getAudioLevels === 'function') {
+        const audioLevel = (mediaRecorderRef.current as any).getAudioLevels();
+        if (audioLevel < 0.01) {  // umbral muy bajo
+          console.warn("Nivel de audio muy bajo, posible problema con el micrófono");
+          LoggingService.warning('audio-recorder', 'Nivel de audio muy bajo', {
+            audioLevel,
+            recordingTime,
+            mediaRecorderState: mediaRecorderRef.current.state
+          }).catch(console.error);
+        }
+      }
+    } catch (err) {
+      console.error("Error al verificar el estado del stream:", err);
+      LoggingService.error('audio-recorder', 'Error al verificar estado del stream', {
+        error: err instanceof Error ? err.message : String(err),
+        recordingTime
+      }).catch(console.error);
     }
-    
-    const track = tracks[0];
-    if (!track.enabled || !track.readyState || track.readyState === 'ended') {
-      handleStreamError(new Error("La pista de audio se ha detenido o deshabilitado"));
-      return;
-    }
-    
-    console.log("Estado del stream de audio:", track.readyState, "Habilitado:", track.enabled);
   };
 
   const handleStreamError = (error: Error) => {
     console.error("Error en el stream de audio:", error);
+    
+    // Log the error to Supabase
+    LoggingService.logAudioRecorderError(error, {
+      recordingTime,
+      retryCount,
+      audioChunksCount: audioChunksRef.current.length,
+      backupAudiosCount: backupAudios.length,
+      lastBackupTime,
+      mediaRecorderState: mediaRecorderRef.current?.state || 'no-recorder'
+    }).catch(console.error);
     
     // Si todavía estamos grabando, intentar recuperarnos
     if (isRecording && retryCount < MAX_RETRY_ATTEMPTS) {
@@ -171,6 +220,13 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   };
 
   const attemptRecovery = async () => {
+    // Log recovery attempt
+    await LoggingService.warning('audio-recorder', `Intento de recuperación de grabación ${retryCount + 1}/${MAX_RETRY_ATTEMPTS}`, {
+      recordingTime,
+      chunksBeforeRecovery: audioChunksRef.current.length,
+      backupsBeforeRecovery: backupAudios.length
+    });
+    
     setRetryCount(prevCount => prevCount + 1);
     
     try {
@@ -178,6 +234,27 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       if (audioChunksRef.current.length > 0) {
         const currentAudioBlob = new Blob(audioChunksRef.current, { type: mediaRecorderRef.current?.mimeType || 'audio/webm' });
         setBackupAudios(prev => [...prev, currentAudioBlob]);
+        
+        // También intentamos guardar un backup en localStorage por si el navegador se cierra
+        try {
+          // Solo guardaremos el último backup y solo si es pequeño
+          if (currentAudioBlob.size < 5 * 1024 * 1024) { // límite de 5MB
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const base64data = reader.result as string;
+              try {
+                localStorage.setItem('audio_backup', base64data);
+                localStorage.setItem('audio_backup_time', new Date().toISOString());
+                console.log("Backup guardado en localStorage");
+              } catch (e) {
+                console.error("Error al guardar en localStorage:", e);
+              }
+            };
+            reader.readAsDataURL(currentAudioBlob);
+          }
+        } catch (e) {
+          console.error("Error al procesar backup para localStorage:", e);
+        }
       }
       
       // Limpiar y reiniciar la grabación
@@ -194,6 +271,12 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       startRecording(true);
     } catch (error) {
       console.error("Error al intentar recuperar la grabación:", error);
+      LoggingService.error('audio-recorder', 'Error en intento de recuperación', {
+        error: error instanceof Error ? error.message : String(error),
+        recoveryAttempt: retryCount + 1,
+        totalAttempts: MAX_RETRY_ATTEMPTS
+      }).catch(console.error);
+      
       handleRecordingFailure(error instanceof Error ? error : new Error(String(error)), true);
     }
   };
@@ -250,18 +333,47 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
 
   const requestMicrophonePermission = async (): Promise<MediaStream> => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      // Log permission request
+      await LoggingService.info('audio-recorder', 'Solicitando permisos de micrófono');
+      
+      const constraints = { 
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
+          autoGainControl: true,
+          // Intentar con una configuración más compatible
+          sampleRate: 44100,
+          channelCount: 1
         } 
+      };
+      
+      console.log("Solicitando acceso al micrófono con constraints:", JSON.stringify(constraints));
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      // Log successful permission
+      await LoggingService.info('audio-recorder', 'Permisos de micrófono concedidos', {
+        tracks: stream.getAudioTracks().length,
+        trackSettings: stream.getAudioTracks()[0]?.getSettings()
       });
+      
       setHasPermission(true);
       return stream;
     } catch (error) {
       setHasPermission(false);
       console.error("Error al solicitar permisos de micrófono:", error);
+      
+      // Log permission error
+      await LoggingService.error('audio-recorder', 'Error al solicitar permisos de micrófono', {
+        error: error instanceof Error ? error.message : String(error),
+        constraintsUsed: { 
+          echoCancellation: true, 
+          noiseSuppression: true, 
+          autoGainControl: true,
+          sampleRate: 44100,
+          channelCount: 1
+        }
+      });
+      
       throw error;
     }
   };
@@ -334,8 +446,9 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
           }
         };
         
-        // Comenzar la grabación pidiendo chunks cada segundo
-        mediaRecorder.start(1000);
+        // Comenzar la grabación pidiendo chunks cada 500ms para tener fragmentos más pequeños
+        // y reducir la pérdida de datos en caso de error
+        mediaRecorder.start(500);
         setIsRecording(true);
         
         // Solo reiniciamos el tiempo si no es un reintento
@@ -410,6 +523,16 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       try {
+        // Log stopping recording
+        LoggingService.info('audio-recorder', 'Deteniendo grabación manualmente', {
+          recordingTime,
+          chunksCollected: audioChunksRef.current.length,
+          backupsCreated: backupAudios.length,
+          mediaRecorderState: mediaRecorderRef.current.state
+        }).catch(console.error);
+        
+        // ... keep existing code (stopping recording)
+        
         if (mediaRecorderRef.current.state === 'recording') {
           mediaRecorderRef.current.stop();
         }
@@ -423,6 +546,12 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         });
       } catch (error) {
         console.error("Error al detener la grabación:", error);
+        LoggingService.error('audio-recorder', 'Error al detener grabación', {
+          error: error instanceof Error ? error.message : String(error),
+          recordingTime,
+          mediaRecorderState: mediaRecorderRef.current?.state || 'unknown'
+        }).catch(console.error);
+        
         handleRecordingFailure(error instanceof Error ? error : new Error(String(error)), true);
       }
     }
