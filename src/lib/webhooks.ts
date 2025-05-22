@@ -3,24 +3,29 @@ type WebhookPayload = {
   audio_url: string;
   transcripcion: string;
   resumen: string;
-  assembly_upload_url?: string;
-  audio_base64?: string;
+  assembly_upload_url: string; // Haciendo este campo obligatorio
+  audio_base64?: string; // Manteniendo este campo como opcional por compatibilidad
 };
 
 export const sendToWebhook = async (payload: WebhookPayload) => {
   try {
-    console.log("Enviando datos al webhook n8n");
+    console.log("Enviando datos al webhook n8n con AssemblyAI URL");
     
     // Asegurarse de que el audio_url no sea null
     if (!payload.audio_url) {
       payload.audio_url = "";
     }
     
+    // Asegurarse de que assembly_upload_url esté presente
+    if (!payload.assembly_upload_url) {
+      throw new Error("URL de AssemblyAI no proporcionada");
+    }
+    
     // Configurar un controlador AbortController con un tiempo de espera más largo (2 minutos)
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 segundos = 2 minutos
     
-    // Usar directamente la nueva URL de webhook con la señal de control
+    // Usar directamente la URL de webhook con la señal de control
     const response = await fetch('https://n8nwebhook.botec.tech/webhook/lovable-audio', {
       method: 'POST',
       headers: {

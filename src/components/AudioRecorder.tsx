@@ -47,6 +47,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   const MAX_RETRY_ATTEMPTS = 3; // Máximo número de reintentos
   const MEDIA_STREAM_CHECK_INTERVAL = 5000; // Verificar el estado del stream cada 5 segundos
   const ASSEMBLY_API_KEY = "1931596b1f744dc0957cdbc534c55aea"; // API key de AssemblyAI
+  const ASSEMBLY_UPLOAD_RETRIES = 2; // Número de reintentos para subidas a AssemblyAI
 
   useEffect(() => {
     if (preselectedPatient) {
@@ -56,14 +57,12 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   }, [preselectedPatient]);
 
   useEffect(() => {
-    // Log when component mounts
     LoggingService.info('audio-recorder', 'Componente AudioRecorder inicializado', {
       preselectedPatient: preselectedPatient ? { id: preselectedPatient.id, name: preselectedPatient.name } : null
     }).catch(err => console.error('Error al registrar inicialización:', err));
 
     return () => {
       cleanupResources();
-      // Log when component unmounts
       LoggingService.info('audio-recorder', 'Componente AudioRecorder desmontado')
         .catch(err => console.error('Error al registrar desmontaje:', err));
     };
@@ -75,7 +74,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
     }
   }, [selectedPatient]);
 
-  // Limpieza de recursos
   const cleanupResources = () => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -121,7 +119,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   };
 
   const getSupportedMimeTypes = () => {
-    // Tipos de MIME comunes para audio
     const mimeTypes = [
       'audio/webm',
       'audio/webm;codecs=opus',
@@ -133,7 +130,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       'audio/wav;codecs=1'
     ];
 
-    // Verificar cuál es soportado
     return mimeTypes.filter(mimeType => {
       try {
         return MediaRecorder.isTypeSupported(mimeType);
@@ -152,11 +148,9 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       return null;
     }
     
-    // Preferir webm si está disponible
     const webmType = supported.find(type => type.includes('webm'));
     if (webmType) return webmType;
     
-    // De lo contrario, usar el primer formato compatible
     return supported[0];
   };
 
@@ -178,10 +172,9 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       
       console.log("Estado del stream de audio:", track.readyState, "Habilitado:", track.enabled);
       
-      // Verificar si hay sonido detectado
       if (mediaRecorderRef.current && typeof (mediaRecorderRef.current as any).getAudioLevels === 'function') {
         const audioLevel = (mediaRecorderRef.current as any).getAudioLevels();
-        if (audioLevel < 0.01) {  // umbral muy bajo
+        if (audioLevel < 0.01) {
           console.warn("Nivel de audio muy bajo, posible problema con el micrófono");
           LoggingService.warning('audio-recorder', 'Nivel de audio muy bajo', {
             audioLevel,
@@ -202,7 +195,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   const handleStreamError = (error: Error) => {
     console.error("Error en el stream de audio:", error);
     
-    // Log the error to Supabase
     LoggingService.logAudioRecorderError(error, {
       recordingTime,
       retryCount,
@@ -212,17 +204,14 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       mediaRecorderState: mediaRecorderRef.current?.state || 'no-recorder'
     }).catch(console.error);
     
-    // Si todavía estamos grabando, intentar recuperarnos
     if (isRecording && retryCount < MAX_RETRY_ATTEMPTS) {
       attemptRecovery();
     } else if (isRecording) {
-      // Si ya agotamos los reintentos, guardar lo que tengamos
       handleRecordingFailure(error, true);
     }
   };
 
   const attemptRecovery = async () => {
-    // Log recovery attempt
     await LoggingService.warning('audio-recorder', `Intento de recuperación de grabación ${retryCount + 1}/${MAX_RETRY_ATTEMPTS}`, {
       recordingTime,
       chunksBeforeRecovery: audioChunksRef.current.length,
@@ -232,15 +221,12 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
     setRetryCount(prevCount => prevCount + 1);
     
     try {
-      // Guardar los chunks actuales antes de reintentar
       if (audioChunksRef.current.length > 0) {
         const currentAudioBlob = new Blob(audioChunksRef.current, { type: mediaRecorderRef.current?.mimeType || 'audio/webm' });
         setBackupAudios(prev => [...prev, currentAudioBlob]);
         
-        // También intentamos guardar un backup en localStorage por si el navegador se cierra
         try {
-          // Solo guardaremos el último backup y solo si es pequeño
-          if (currentAudioBlob.size < 5 * 1024 * 1024) { // límite de 5MB
+          if (currentAudioBlob.size < 5 * 1024 * 1024) {
             const reader = new FileReader();
             reader.onloadend = () => {
               const base64data = reader.result as string;
@@ -259,7 +245,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         }
       }
       
-      // Limpiar y reiniciar la grabación
       cleanupResources();
       
       toast({
@@ -268,7 +253,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         variant: "default"
       });
       
-      // Pequeña pausa antes de reintentar
       await new Promise(resolve => setTimeout(resolve, 1000));
       startRecording(true);
     } catch (error) {
@@ -288,7 +272,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       const error = event.error || new Error("Error desconocido en la grabación");
       console.error("MediaRecorder error:", error);
       
-      // Solo manejamos el error aquí si no estamos intentando una recuperación
       if (retryCount < MAX_RETRY_ATTEMPTS) {
         attemptRecovery();
       } else {
@@ -304,7 +287,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       console.log("Creando backup de seguridad...");
       setIsBackupSaving(true);
       
-      // Crear un blob con los datos actuales para backup
       const backupBlob = new Blob(audioChunksRef.current, { type: mediaRecorderRef.current.mimeType });
       setBackupAudios(prev => [...prev, backupBlob]);
       setLastBackupTime(recordingTime);
@@ -335,7 +317,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
 
   const requestMicrophonePermission = async (): Promise<MediaStream> => {
     try {
-      // Log permission request
       await LoggingService.info('audio-recorder', 'Solicitando permisos de micrófono');
       
       const constraints = { 
@@ -343,7 +324,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          // Intentar con una configuración más compatible
           sampleRate: 44100,
           channelCount: 1
         } 
@@ -352,7 +332,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       console.log("Solicitando acceso al micrófono con constraints:", JSON.stringify(constraints));
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
-      // Log successful permission
       await LoggingService.info('audio-recorder', 'Permisos de micrófono concedidos', {
         tracks: stream.getAudioTracks().length,
         trackSettings: stream.getAudioTracks()[0]?.getSettings()
@@ -364,7 +343,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       setHasPermission(false);
       console.error("Error al solicitar permisos de micrófono:", error);
       
-      // Log permission error
       await LoggingService.error('audio-recorder', 'Error al solicitar permisos de micrófono', {
         error: error instanceof Error ? error.message : String(error),
         constraintsUsed: { 
@@ -392,7 +370,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       return;
     }
 
-    // Si no es un reintento, reiniciamos el contador
     if (!isRetry) {
       setRetryCount(0);
       setBackupAudios([]);
@@ -403,7 +380,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       const stream = await requestMicrophonePermission();
       streamRef.current = stream;
       
-      // Determinar el formato MIME compatible
       const mimeType = getBestMimeType();
       if (!mimeType) {
         throw new Error("No se encontró un formato de audio compatible con este dispositivo");
@@ -411,7 +387,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       
       console.log(`Usando formato de audio: ${mimeType}`);
       
-      // Configuración de opciones para MediaRecorder
       const options: MediaRecorderOptions = {
         mimeType: mimeType
       };
@@ -420,7 +395,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         const mediaRecorder = new MediaRecorder(stream, options);
         mediaRecorderRef.current = mediaRecorder;
         
-        // Si es un reintento, mantenemos los chunks anteriores
         if (!isRetry) {
           audioChunksRef.current = [];
         }
@@ -448,23 +422,16 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
           }
         };
         
-        // Comenzar la grabación pidiendo chunks cada 500ms para tener fragmentos más pequeños
-        // y reducir la pérdida de datos en caso de error
         mediaRecorder.start(500);
         setIsRecording(true);
         
-        // Solo reiniciamos el tiempo si no es un reintento
         if (!isRetry) {
           setRecordingTime(0);
         }
         
-        // Configurar el timer para actualizar el tiempo
         setupRecordingTimer();
-        
-        // Configurar timer de backup
         setupBackupTimer();
         
-        // Configurar verificación periódica del stream
         if (mediaStreamCheckerRef.current) {
           clearInterval(mediaStreamCheckerRef.current);
         }
@@ -511,7 +478,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'recording') {
         console.warn("MediaRecorder is no longer recording");
         
-        // Intentar recuperar si estamos por debajo del límite de intentos
         if (retryCount < MAX_RETRY_ATTEMPTS) {
           console.log("Intentando recuperar grabación interrumpida...");
           attemptRecovery();
@@ -525,15 +491,12 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       try {
-        // Log stopping recording
         LoggingService.info('audio-recorder', 'Deteniendo grabación manualmente', {
           recordingTime,
           chunksCollected: audioChunksRef.current.length,
           backupsCreated: backupAudios.length,
           mediaRecorderState: mediaRecorderRef.current.state
         }).catch(console.error);
-        
-        // ... keep existing code (stopping recording)
         
         if (mediaRecorderRef.current.state === 'recording') {
           mediaRecorderRef.current.stop();
@@ -563,18 +526,15 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
     console.error("Fallo en la grabación:", error);
     setRecordingError(`Error en la grabación: ${error.message}`);
     
-    // Detener timers y recursos
     cleanupResources();
     setIsRecording(false);
     
-    // Si tenemos backups y debemos intentar usarlos
     if (tryUseBackup && backupAudios.length > 0) {
       toast({
         title: "Recuperando grabación",
         description: "Intentando recuperar datos desde la copia de seguridad",
       });
       
-      // Intentar usar el backup más reciente
       processBackupRecording();
     } else {
       toast({
@@ -586,14 +546,12 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   };
 
   const finalizeRecording = async () => {
-    // Combinamos todos los chunks de audio (incluyendo backups si es necesario)
     const allChunks = [...audioChunksRef.current];
     
     if (allChunks.length === 0) {
       throw new Error("No se registraron datos de audio. Verifique que su micrófono está funcionando correctamente.");
     }
     
-    // Crear el blob final con el tipo MIME adecuado
     const mimeType = mediaRecorderRef.current?.mimeType || 'audio/webm';
     const audioBlob = new Blob(allChunks, { type: mimeType });
     
@@ -620,7 +578,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
     try {
       setIsProcessing(true);
       
-      // Combinar todos los blobs de backup
       const combinedBlob = new Blob(backupAudios, { type: backupAudios[0].type });
       
       if (combinedBlob.size === 0) {
@@ -661,73 +618,43 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         selectedPatientId: selectedPatient?.id
       });
       
-      // Registrar el inicio del procesamiento
       await LoggingService.info('audio-recorder', 'Iniciando procesamiento de audio', {
         audioSize: audioBlob.size,
         audioType: audioBlob.type,
         recordingDuration: recordingTime
       });
       
-      // Paso 1: Subir a AssemblyAI para obtener URL
       let assemblyUploadUrl;
+      toast({
+        title: "Subiendo audio",
+        description: "El audio se está subiendo a AssemblyAI...",
+      });
+      
       try {
-        toast({
-          title: "Subiendo audio",
-          description: "El audio se está subiendo a AssemblyAI...",
-        });
-        
         assemblyUploadUrl = await uploadToAssemblyAI(audioBlob);
+        
+        if (!assemblyUploadUrl) {
+          throw new Error("No se pudo obtener URL de AssemblyAI");
+        }
+        
+        await LoggingService.info('audio-recorder', 'Audio subido a AssemblyAI exitosamente', {
+          assemblyUploadUrl
+        });
         
         toast({
           title: "Audio subido",
-          description: "El audio se ha subido correctamente, procesando...",
+          description: "El audio se ha subido correctamente a AssemblyAI, procesando...",
         });
       } catch (uploadError) {
-        console.error("Error al subir audio a AssemblyAI:", uploadError);
-        
-        // Si falla, intentamos el método original con base64 como fallback
-        toast({
-          title: "Usando método alternativo",
-          description: "No se pudo subir a AssemblyAI, usando método alternativo...",
-          variant: "destructive"
+        console.error("Error fatal al subir audio a AssemblyAI:", uploadError);
+        await LoggingService.error('audio-recorder', 'Error fatal en la subida a AssemblyAI', {
+          error: uploadError instanceof Error ? uploadError.message : String(uploadError),
+          blobSize: audioBlob.size,
+          blobType: audioBlob.type
         });
-        
-        const base64Audio = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64String = reader.result as string;
-            const base64WithoutPrefix = base64String.split(',')[1];
-            resolve(base64WithoutPrefix);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(audioBlob);
-        });
-        
-        // Llamar al webhook con el audio base64 como fallback
-        const webhookResponse = await sendToWebhook({
-          audio_url: audioUrl || "",
-          audio_base64: base64Audio,
-          transcripcion: "",
-          resumen: ""
-        });
-        
-        // Continuar con el procesamiento normal
-        if (!webhookResponse.success && !webhookResponse.pending) {
-          throw new Error(webhookResponse.error || "Error en el procesamiento del audio");
-        }
-        
-        // Resto del procesamiento igual que antes
-        if (webhookResponse.pending) {
-          handlePendingWebhook();
-          return;
-        }
-        
-        const { transcripcion, resumen } = webhookResponse.data;
-        finalizeConsultation(transcripcion, resumen);
-        return;
+        throw new Error(`Error al subir audio a AssemblyAI: ${uploadError instanceof Error ? uploadError.message : 'Error desconocido'}`);
       }
       
-      // Paso 2: Enviar la URL de AssemblyAI al webhook
       await LoggingService.info('audio-recorder', 'Enviando URL de AssemblyAI al webhook', {
         assemblyUrl: assemblyUploadUrl
       });
@@ -759,7 +686,79 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       setIsProcessing(false);
     }
   };
-  
+
+  const uploadToAssemblyAI = async (audioBlob: Blob): Promise<string> => {
+    setIsUploading(true);
+    
+    let attemptsLeft = ASSEMBLY_UPLOAD_RETRIES;
+    let lastError: any = null;
+    
+    while (attemptsLeft >= 0) {
+      try {
+        await LoggingService.info('audio-recorder', `Intento de subida a AssemblyAI ${ASSEMBLY_UPLOAD_RETRIES - attemptsLeft + 1}/${ASSEMBLY_UPLOAD_RETRIES + 1}`, {
+          blobSize: audioBlob.size,
+          blobType: audioBlob.type
+        });
+        
+        const startTime = Date.now();
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos timeout
+        
+        const response = await fetch('https://api.assemblyai.com/v2/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': ASSEMBLY_API_KEY,
+            'Content-Type': 'application/octet-stream'
+          },
+          body: audioBlob,
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Error de AssemblyAI: ${response.status} - ${errorText}`);
+        }
+        
+        const result = await response.json();
+        const uploadDurationMs = Date.now() - startTime;
+        
+        if (!result.upload_url) {
+          throw new Error('No se recibió URL de subida de AssemblyAI');
+        }
+        
+        await LoggingService.info('audio-recorder', 'Subida a AssemblyAI exitosa', {
+          uploadUrl: result.upload_url,
+          uploadDurationSeconds: uploadDurationMs / 1000,
+          uploadSpeedKBps: audioBlob.size / 1024 / (uploadDurationMs / 1000)
+        });
+        
+        return result.upload_url;
+      } catch (error) {
+        lastError = error;
+        console.error(`Intento ${ASSEMBLY_UPLOAD_RETRIES - attemptsLeft + 1}/${ASSEMBLY_UPLOAD_RETRIES + 1} fallido al subir audio a AssemblyAI:`, error);
+        
+        await LoggingService.error('audio-recorder', `Error en intento ${ASSEMBLY_UPLOAD_RETRIES - attemptsLeft + 1} de subida a AssemblyAI`, {
+          error: error instanceof Error ? error.message : 'Error desconocido',
+          blobSize: audioBlob.size,
+          remainingAttempts: attemptsLeft
+        });
+        
+        if (attemptsLeft > 0) {
+          const backoffTime = 1000 * Math.pow(2, ASSEMBLY_UPLOAD_RETRIES - attemptsLeft);
+          await new Promise(resolve => setTimeout(resolve, backoffTime));
+          attemptsLeft--;
+        } else {
+          throw error;
+        }
+      }
+    }
+    
+    throw lastError || new Error('Error desconocido al subir a AssemblyAI');
+  };
+
   const handlePendingWebhook = () => {
     toast({
       title: "Procesamiento en curso",
@@ -768,7 +767,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       duration: 10000,
     });
     
-    // Crear consulta pendiente
     const consultationId = crypto.randomUUID();
     
     const pendingConsultation: ConsultationRecord = {
@@ -783,7 +781,6 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       status: "processing"
     };
     
-    // Guardamos la consulta como "en proceso"
     saveConsultation(pendingConsultation)
       .then(saveError => {
         if (saveError) {
@@ -799,7 +796,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         resetRecorder();
       });
   };
-  
+
   const finalizeConsultation = (transcripcion: string, resumen: string) => {
     const patientData = groqApi.extractPatientData(resumen);
     
@@ -839,7 +836,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         handleProcessingError(err);
       });
   };
-  
+
   const handleProcessingError = (error: any) => {
     setRecordingError(`Error de procesamiento: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     toast({
@@ -848,79 +845,13 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       variant: "destructive",
     });
   };
-  
+
   const resetRecorder = () => {
     setPatientName("");
     setAudioUrl(null);
     setSelectedPatient(null);
     setRecordingError(null);
     setBackupAudios([]);
-  };
-  
-  // Sube el audio a AssemblyAI y obtiene la URL
-  const uploadToAssemblyAI = async (audioBlob: Blob): Promise<string> => {
-    setIsUploading(true);
-    
-    try {
-      await LoggingService.info('audio-recorder', 'Iniciando subida a AssemblyAI', {
-        blobSize: audioBlob.size,
-        blobType: audioBlob.type
-      });
-      
-      // Configurar la solicitud a AssemblyAI
-      const response = await fetch('https://api.assemblyai.com/v2/upload', {
-        method: 'POST',
-        headers: {
-          'Authorization': ASSEMBLY_API_KEY
-        },
-        body: audioBlob
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Error de AssemblyAI: ${response.status} - ${errorText}`);
-      }
-      
-      const result = await response.json();
-      
-      if (!result.upload_url) {
-        throw new Error('No se recibió URL de subida de AssemblyAI');
-      }
-      
-      await LoggingService.info('audio-recorder', 'Subida a AssemblyAI exitosa', {
-        uploadUrl: result.upload_url
-      });
-      
-      return result.upload_url;
-    } catch (error) {
-      console.error('Error al subir audio a AssemblyAI:', error);
-      
-      await LoggingService.error('audio-recorder', 'Error en la subida a AssemblyAI', {
-        error: error instanceof Error ? error.message : 'Error desconocido',
-        blobSize: audioBlob.size
-      });
-      
-      throw error;
-    } finally {
-      setIsUploading(false);
-    }
-  };
-  
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handlePatientSelect = (patient: Patient) => {
-    setSelectedPatient(patient);
-    setShowPatientSelector(false);
-  };
-
-  const manualBackup = () => {
-    if (isRecording && !isBackupSaving) {
-      createBackup();
-    }
   };
 
   return (
