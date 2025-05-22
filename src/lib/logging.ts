@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { sendToWebhook } from "./webhooks";
 
 export type LogLevel = 'info' | 'warning' | 'error' | 'critical';
 
@@ -180,8 +181,8 @@ export const logError = (source: string, message: string, details?: Record<strin
     .catch(err => console.error('Error al registrar error:', err));
 };
 
-// Activar el webhook mejorado con logging
-const enhanceWebhookWithLogging = require('./webhooks').sendToWebhook;
+// Alias al webhook mejorado con logging
+export const enhanceWebhookWithLogging = sendToWebhook;
 
 // Modificamos el main.tsx para activar esta función
 export const enhanceLogging = () => {
