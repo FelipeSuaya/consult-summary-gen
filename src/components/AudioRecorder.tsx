@@ -49,6 +49,22 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   const ASSEMBLY_API_KEY = "1931596b1f744dc0957cdbc534c55aea"; // API key de AssemblyAI
   const ASSEMBLY_UPLOAD_RETRIES = 2; // Número de reintentos para subidas a AssemblyAI
 
+  const formatTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const handlePatientSelect = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setShowPatientSelector(false);
+  };
+
+  const manualBackup = () => {
+    if (!isRecording) return;
+    createBackup();
+  };
+
   useEffect(() => {
     if (preselectedPatient) {
       setSelectedPatient(preselectedPatient);
