@@ -3,6 +3,7 @@ type WebhookPayload = {
   audio_url: string;
   transcripcion: string;
   resumen: string;
+  assembly_upload_url?: string;
   audio_base64?: string;
 };
 

@@ -2,7 +2,10 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
-import { LoggingService } from './lib/logging.ts'
+import { LoggingService, enhanceLogging } from './lib/logging.ts'
+
+// Activar el sistema de logging mejorado
+enhanceLogging();
 
 // Registrar el inicio de la aplicación
 LoggingService.info('app', 'Aplicación iniciada', {

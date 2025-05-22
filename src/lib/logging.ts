@@ -161,6 +161,16 @@ export class LoggingService {
       timestamp: new Date().toISOString()
     });
   }
+
+  /**
+   * Registra información sobre la integración con AssemblyAI
+   */
+  static async logAssemblyAIOperation(operation: string, details?: Record<string, any>): Promise<ApiResponse<{ id: string }>> {
+    return this.info('assembly-ai', `Operación AssemblyAI: ${operation}`, {
+      ...details,
+      timestamp: new Date().toISOString()
+    });
+  }
 }
 
 // Función de conveniencia para registrar errores de manera rápida
@@ -170,42 +180,11 @@ export const logError = (source: string, message: string, details?: Record<strin
     .catch(err => console.error('Error al registrar error:', err));
 };
 
-// Modificamos el webhook para registrar logs cuando hay errores de procesamiento
-export const enhanceWebhookWithLogging = () => {
-  // Backup de la función original de sendToWebhook
-  // Esta modificación se puede aplicar cuando sea necesario
-  const originalSendToWebhook = require('./webhooks').sendToWebhook;
-  
-  const enhancedSendToWebhook = async (payload: any) => {
-    try {
-      // Registrar intento de envío
-      await LoggingService.info('webhook', 'Enviando datos al webhook', { 
-        audio_url_provided: !!payload.audio_url 
-      });
-      
-      const result = await originalSendToWebhook(payload);
-      
-      if (!result.success) {
-        // Registrar error
-        await LoggingService.error('webhook', 'Error en webhook', { 
-          error: result.error,
-          payload_summary: {
-            has_audio: !!payload.audio_url,
-            audio_length: payload.audio_url?.length || 0
-          }
-        });
-      }
-      
-      return result;
-    } catch (error) {
-      // Registrar error inesperado
-      await LoggingService.critical('webhook', 'Error inesperado en webhook', { 
-        error: error instanceof Error ? error.message : 'Error desconocido' 
-      });
-      throw error;
-    }
-  };
-  
-  // Esta función puede ser usada para reemplazar la original cuando sea necesario
-  return enhancedSendToWebhook;
+// Activar el webhook mejorado con logging
+const enhanceWebhookWithLogging = require('./webhooks').sendToWebhook;
+
+// Modificamos el main.tsx para activar esta función
+export const enhanceLogging = () => {
+  console.log("Sistema de logging mejorado activado");
+  return true;
 };

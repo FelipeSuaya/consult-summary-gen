@@ -32,6 +32,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [lastBackupTime, setLastBackupTime] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -45,6 +46,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   const BACKUP_INTERVAL = 30; // Guardar segmentos cada 30 segundos
   const MAX_RETRY_ATTEMPTS = 3; // Máximo número de reintentos
   const MEDIA_STREAM_CHECK_INTERVAL = 5000; // Verificar el estado del stream cada 5 segundos
+  const ASSEMBLY_API_KEY = "1931596b1f744dc0957cdbc534c55aea"; // API key de AssemblyAI
 
   useEffect(() => {
     if (preselectedPatient) {
@@ -659,62 +661,87 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         selectedPatientId: selectedPatient?.id
       });
       
-      const base64Audio = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64String = reader.result as string;
-          const base64WithoutPrefix = base64String.split(',')[1];
-          resolve(base64WithoutPrefix);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(audioBlob);
+      // Registrar el inicio del procesamiento
+      await LoggingService.info('audio-recorder', 'Iniciando procesamiento de audio', {
+        audioSize: audioBlob.size,
+        audioType: audioBlob.type,
+        recordingDuration: recordingTime
+      });
+      
+      // Paso 1: Subir a AssemblyAI para obtener URL
+      let assemblyUploadUrl;
+      try {
+        toast({
+          title: "Subiendo audio",
+          description: "El audio se está subiendo a AssemblyAI...",
+        });
+        
+        assemblyUploadUrl = await uploadToAssemblyAI(audioBlob);
+        
+        toast({
+          title: "Audio subido",
+          description: "El audio se ha subido correctamente, procesando...",
+        });
+      } catch (uploadError) {
+        console.error("Error al subir audio a AssemblyAI:", uploadError);
+        
+        // Si falla, intentamos el método original con base64 como fallback
+        toast({
+          title: "Usando método alternativo",
+          description: "No se pudo subir a AssemblyAI, usando método alternativo...",
+          variant: "destructive"
+        });
+        
+        const base64Audio = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64String = reader.result as string;
+            const base64WithoutPrefix = base64String.split(',')[1];
+            resolve(base64WithoutPrefix);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(audioBlob);
+        });
+        
+        // Llamar al webhook con el audio base64 como fallback
+        const webhookResponse = await sendToWebhook({
+          audio_url: audioUrl || "",
+          audio_base64: base64Audio,
+          transcripcion: "",
+          resumen: ""
+        });
+        
+        // Continuar con el procesamiento normal
+        if (!webhookResponse.success && !webhookResponse.pending) {
+          throw new Error(webhookResponse.error || "Error en el procesamiento del audio");
+        }
+        
+        // Resto del procesamiento igual que antes
+        if (webhookResponse.pending) {
+          handlePendingWebhook();
+          return;
+        }
+        
+        const { transcripcion, resumen } = webhookResponse.data;
+        finalizeConsultation(transcripcion, resumen);
+        return;
+      }
+      
+      // Paso 2: Enviar la URL de AssemblyAI al webhook
+      await LoggingService.info('audio-recorder', 'Enviando URL de AssemblyAI al webhook', {
+        assemblyUrl: assemblyUploadUrl
       });
       
       const webhookResponse = await sendToWebhook({
         audio_url: audioUrl || "",
-        audio_base64: base64Audio,
+        assembly_upload_url: assemblyUploadUrl,
         transcripcion: "",
         resumen: ""
       });
       
       if (!webhookResponse.success) {
         if (webhookResponse.pending) {
-          toast({
-            title: "Procesamiento en curso",
-            description: webhookResponse.message || "El audio se está procesando en segundo plano, puede tomar unos minutos.",
-            variant: "default",
-            duration: 10000,
-          });
-          
-          // Aún consideramos esto un éxito ya que se está procesando
-          const consultationId = crypto.randomUUID();
-          
-          const pendingConsultation: ConsultationRecord = {
-            id: consultationId,
-            patientName: patientName.trim(),
-            dateTime: new Date().toISOString(),
-            audioUrl: audioUrl || undefined,
-            transcription: "Procesando transcripción...",
-            summary: "Procesando resumen...",
-            patientData: {},
-            patientId: selectedPatient?.id,
-            status: "processing"
-          };
-          
-          // Guardamos la consulta como "en proceso"
-          const saveError = await saveConsultation(pendingConsultation);
-          
-          if (saveError) {
-            console.error("Error guardando consulta en proceso:", saveError);
-          } else {
-            onRecordingComplete(pendingConsultation);
-          }
-          
-          setPatientName("");
-          setAudioUrl(null);
-          setSelectedPatient(null);
-          setRecordingError(null);
-          setBackupAudios([]);
+          handlePendingWebhook();
           return;
         }
         
@@ -724,55 +751,161 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
       const { transcripcion, resumen } = webhookResponse.data;
       console.log("Webhook response processed:", { transcripcion, resumen });
       
-      const patientData = groqApi.extractPatientData(resumen);
-      
-      const consultationId = crypto.randomUUID();
-      
-      const newConsultation: ConsultationRecord = {
-        id: consultationId,
-        patientName: patientName.trim(),
-        dateTime: new Date().toISOString(),
-        audioUrl: audioUrl || undefined,
-        transcription: transcripcion,
-        summary: resumen,
-        patientData,
-        patientId: selectedPatient?.id,
-        status: "completed"
-      };
-      
-      const saveError = await saveConsultation(newConsultation);
-      
-      if (saveError) {
-        throw new Error(saveError);
-      }
-      
-      console.log("Consultation saved successfully:", consultationId);
-      
-      onRecordingComplete(newConsultation);
-      
-      toast({
-        title: "Consulta Procesada",
-        description: "La transcripción y el resumen están listos",
-      });
-      
-      setPatientName("");
-      setAudioUrl(null);
-      setSelectedPatient(null);
-      setRecordingError(null);
-      setBackupAudios([]);
+      finalizeConsultation(transcripcion, resumen);
     } catch (error) {
       console.error("Error de procesamiento:", error);
-      setRecordingError(`Error de procesamiento: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-      toast({
-        title: "Error de Procesamiento",
-        description: error instanceof Error ? error.message : "No se pudo procesar la grabación",
-        variant: "destructive",
-      });
+      handleProcessingError(error);
     } finally {
       setIsProcessing(false);
     }
   };
-
+  
+  const handlePendingWebhook = () => {
+    toast({
+      title: "Procesamiento en curso",
+      description: "El audio se está procesando en segundo plano, puede tomar unos minutos.",
+      variant: "default",
+      duration: 10000,
+    });
+    
+    // Crear consulta pendiente
+    const consultationId = crypto.randomUUID();
+    
+    const pendingConsultation: ConsultationRecord = {
+      id: consultationId,
+      patientName: patientName.trim(),
+      dateTime: new Date().toISOString(),
+      audioUrl: audioUrl || undefined,
+      transcription: "Procesando transcripción...",
+      summary: "Procesando resumen...",
+      patientData: {},
+      patientId: selectedPatient?.id,
+      status: "processing"
+    };
+    
+    // Guardamos la consulta como "en proceso"
+    saveConsultation(pendingConsultation)
+      .then(saveError => {
+        if (saveError) {
+          console.error("Error guardando consulta en proceso:", saveError);
+        } else {
+          onRecordingComplete(pendingConsultation);
+        }
+        
+        resetRecorder();
+      })
+      .catch(err => {
+        console.error("Error inesperado al guardar consulta:", err);
+        resetRecorder();
+      });
+  };
+  
+  const finalizeConsultation = (transcripcion: string, resumen: string) => {
+    const patientData = groqApi.extractPatientData(resumen);
+    
+    const consultationId = crypto.randomUUID();
+    
+    const newConsultation: ConsultationRecord = {
+      id: consultationId,
+      patientName: patientName.trim(),
+      dateTime: new Date().toISOString(),
+      audioUrl: audioUrl || undefined,
+      transcription: transcripcion,
+      summary: resumen,
+      patientData,
+      patientId: selectedPatient?.id,
+      status: "completed"
+    };
+    
+    saveConsultation(newConsultation)
+      .then(saveError => {
+        if (saveError) {
+          throw new Error(saveError);
+        }
+        
+        console.log("Consultation saved successfully:", consultationId);
+        
+        onRecordingComplete(newConsultation);
+        
+        toast({
+          title: "Consulta Procesada",
+          description: "La transcripción y el resumen están listos",
+        });
+        
+        resetRecorder();
+      })
+      .catch(err => {
+        console.error("Error al guardar consulta:", err);
+        handleProcessingError(err);
+      });
+  };
+  
+  const handleProcessingError = (error: any) => {
+    setRecordingError(`Error de procesamiento: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    toast({
+      title: "Error de Procesamiento",
+      description: error instanceof Error ? error.message : "No se pudo procesar la grabación",
+      variant: "destructive",
+    });
+  };
+  
+  const resetRecorder = () => {
+    setPatientName("");
+    setAudioUrl(null);
+    setSelectedPatient(null);
+    setRecordingError(null);
+    setBackupAudios([]);
+  };
+  
+  // Sube el audio a AssemblyAI y obtiene la URL
+  const uploadToAssemblyAI = async (audioBlob: Blob): Promise<string> => {
+    setIsUploading(true);
+    
+    try {
+      await LoggingService.info('audio-recorder', 'Iniciando subida a AssemblyAI', {
+        blobSize: audioBlob.size,
+        blobType: audioBlob.type
+      });
+      
+      // Configurar la solicitud a AssemblyAI
+      const response = await fetch('https://api.assemblyai.com/v2/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': ASSEMBLY_API_KEY
+        },
+        body: audioBlob
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error de AssemblyAI: ${response.status} - ${errorText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.upload_url) {
+        throw new Error('No se recibió URL de subida de AssemblyAI');
+      }
+      
+      await LoggingService.info('audio-recorder', 'Subida a AssemblyAI exitosa', {
+        uploadUrl: result.upload_url
+      });
+      
+      return result.upload_url;
+    } catch (error) {
+      console.error('Error al subir audio a AssemblyAI:', error);
+      
+      await LoggingService.error('audio-recorder', 'Error en la subida a AssemblyAI', {
+        error: error instanceof Error ? error.message : 'Error desconocido',
+        blobSize: audioBlob.size
+      });
+      
+      throw error;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+  
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -833,7 +966,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
             </Alert>
           )}
           
-          {(isRecording || isProcessing) && (
+          {(isRecording || isProcessing || isUploading) && (
             <div className="mt-4">
               {isRecording ? (
                 <div className="space-y-2">
@@ -868,6 +1001,11 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
                     </Button>
                   </div>
                 </div>
+              ) : isUploading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                  <span className="text-blue-600 font-medium">Subiendo audio a AssemblyAI...</span>
+                </div>
               ) : (
                 <div className="flex items-center justify-center space-x-2">
                   <Loader2 className="h-4 w-4 animate-spin text-medical-600" />
@@ -894,7 +1032,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
                 onClick={() => startRecording(false)} 
                 variant="default"
                 size="lg"
-                disabled={isProcessing || !patientName.trim()}
+                disabled={isProcessing || isUploading || !patientName.trim()}
                 className="w-full sm:w-auto bg-medical-600 hover:bg-medical-700"
               >
                 <Mic className="mr-2 h-4 w-4" />
