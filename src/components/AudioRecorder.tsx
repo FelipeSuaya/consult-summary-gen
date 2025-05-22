@@ -46,7 +46,7 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
   const BACKUP_INTERVAL = 30; // Guardar segmentos cada 30 segundos
   const MAX_RETRY_ATTEMPTS = 3; // Máximo número de reintentos
   const MEDIA_STREAM_CHECK_INTERVAL = 5000; // Verificar el estado del stream cada 5 segundos
-  const ASSEMBLY_API_KEY = "1931596b1f744dc0957cdbc534c55aea"; // API key de AssemblyAI
+  const ASSEMBLY_API_KEY = "1931596bff744dc0957cdbc534c55aea"; // API key de AssemblyAI
   const ASSEMBLY_UPLOAD_RETRIES = 2; // Número de reintentos para subidas a AssemblyAI
 
   const formatTime = (seconds: number): string => {
