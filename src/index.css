@@ -1,4 +1,5 @@
 
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -193,7 +194,10 @@
 
   /* Move body styles here to use the medical-pattern class */
   body {
-    @apply bg-medical-pattern text-foreground font-['Inter'] antialiased;
+    @apply text-foreground font-['Inter'] antialiased;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%, #f8fafc 100%);
+    background-size: 400% 400%;
+    animation: medical-shift 20s ease-in-out infinite;
     min-height: 100vh;
     background-attachment: fixed;
   }
@@ -269,3 +273,4 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(14, 165, 233, 0.5);
 }
+
