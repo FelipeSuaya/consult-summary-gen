@@ -85,6 +85,14 @@
     --sidebar-border: 51 65 85;
     --sidebar-ring: 56 189 248;
   }
+
+  * {
+    @apply border-border;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
 }
 
 @layer components {
@@ -182,21 +190,12 @@
   .stagger-animation > *:nth-child(3) { animation-delay: 0.3s; }
   .stagger-animation > *:nth-child(4) { animation-delay: 0.4s; }
   .stagger-animation > *:nth-child(5) { animation-delay: 0.5s; }
-}
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-
+  /* Move body styles here to use the medical-pattern class */
   body {
     @apply bg-medical-pattern text-foreground font-['Inter'] antialiased;
     min-height: 100vh;
     background-attachment: fixed;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold tracking-tight;
   }
 }
 
