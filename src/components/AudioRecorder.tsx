@@ -739,7 +739,7 @@ const AudioRecorder = ({
     setBackupAudios([]);
   };
   return <Card className="w-full">
-      <CardContent className="">
+      <CardContent className="p-6">
         <div className="space-y-4">
           <div className="space-b-2">
             <Label htmlFor="patientName">Nombre del Paciente</Label>
