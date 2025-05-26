@@ -108,7 +108,7 @@
   }
 
   .glass-card {
-    @apply bg-white/80 backdrop-blur-xl border border-white/30 shadow-glass;
+    @apply bg-slate-700/90 backdrop-blur-xl border border-slate-600/40 shadow-glass text-white;
   }
 
   .hover-lift {
