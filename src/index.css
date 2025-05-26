@@ -93,7 +93,7 @@
   }
 
   body {
-    @apply bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 text-foreground font-['Inter'] antialiased;
+    @apply bg-medical-pattern text-foreground font-['Inter'] antialiased;
     min-height: 100vh;
     background-attachment: fixed;
   }
@@ -107,11 +107,96 @@
   }
 
   .glass-card {
-    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-glass;
+    @apply bg-white/80 backdrop-blur-xl border border-white/30 shadow-glass;
   }
 
   .hover-lift {
-    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
+  }
+
+  .medical-pattern {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%, #f8fafc 100%);
+    background-size: 400% 400%;
+    animation: medical-shift 20s ease-in-out infinite;
+  }
+}
+
+/* Animación del fondo médico */
+@keyframes medical-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  25% {
+    background-position: 100% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  75% {
+    background-position: 0% 100%;
+  }
+}
+
+/* Elementos médicos en el fondo */
+.medical-bg-elements {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.medical-bg-elements::before {
+  content: '';
+  position: absolute;
+  top: 10%;
+  left: 5%;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.08) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: float-1 15s ease-in-out infinite;
+}
+
+.medical-bg-elements::after {
+  content: '';
+  position: absolute;
+  bottom: 15%;
+  right: 8%;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.06) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: float-2 18s ease-in-out infinite reverse;
+}
+
+@keyframes float-1 {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px) scale(1);
+  }
+  25% {
+    transform: translateY(-20px) translateX(10px) scale(1.05);
+  }
+  50% {
+    transform: translateY(-10px) translateX(-15px) scale(0.95);
+  }
+  75% {
+    transform: translateY(15px) translateX(5px) scale(1.02);
+  }
+}
+
+@keyframes float-2 {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px) scale(1);
+  }
+  33% {
+    transform: translateY(10px) translateX(-8px) scale(1.03);
+  }
+  66% {
+    transform: translateY(-15px) translateX(12px) scale(0.97);
   }
 }
 
