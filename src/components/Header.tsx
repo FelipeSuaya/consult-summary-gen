@@ -1,19 +1,17 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Activity, User, LogOut, Stethoscope, Heart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
-
 const Header = () => {
-  const { user, logout } = useAuth();
-
+  const {
+    user,
+    logout
+  } = useAuth();
   const handleLogout = async () => {
     await logout();
   };
-
-  return (
-    <header className="sticky top-0 z-50 border-b border-white/30 bg-white/95 backdrop-blur-2xl supports-[backdrop-filter]:bg-white/90">
+  return <header className="sticky top-0 z-50 border-b border-white/30 bg-white/95 backdrop-blur-2xl supports-[backdrop-filter]:bg-white/90">
       <div className="absolute inset-0 bg-gradient-to-r from-medical-500/3 via-transparent to-emerald-500/3"></div>
       <div className="container relative flex h-24 items-center justify-between py-6">
         <div className="flex items-center gap-4">
@@ -36,42 +34,26 @@ const Header = () => {
         </div>
         
         <div className="flex items-center gap-4">
-          {user ? (
-            <div className="flex items-center gap-4">
+          {user ? <div className="flex items-center gap-4">
               <div className="hidden sm:flex flex-col items-end px-4 py-2 rounded-2xl bg-white/80 backdrop-blur-sm border border-white/60">
                 <span className="text-sm font-semibold text-slate-700">Dr. Usuario</span>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs text-muted-foreground">Sesión activa</span>
+                  <span className="text-xs text-gray-950">Sesión activa</span>
                 </div>
               </div>
-              <Button 
-                variant="outline" 
-                size="default" 
-                onClick={handleLogout}
-                className="group h-12 px-6 border-2 border-red-100 bg-white/90 text-red-600 hover:bg-red-50 hover:border-red-200 hover:text-red-700 transition-all duration-300 shadow-lg hover:shadow-xl backdrop-blur-sm rounded-2xl font-semibold"
-              >
+              <Button variant="outline" size="default" onClick={handleLogout} className="group h-12 px-6 border-2 border-red-100 bg-white/90 text-red-600 hover:bg-red-50 hover:border-red-200 hover:text-red-700 transition-all duration-300 shadow-lg hover:shadow-xl backdrop-blur-sm rounded-2xl font-semibold">
                 <LogOut className="h-5 w-5 mr-2 group-hover:rotate-12 transition-transform duration-300" />
                 <span>Cerrar Sesión</span>
               </Button>
-            </div>
-          ) : (
-            <Button 
-              variant="outline" 
-              size="default" 
-              asChild
-              className="group h-12 px-6 border-2 border-medical-200 bg-white/90 text-medical-700 hover:bg-medical-50 hover:border-medical-300 hover:text-medical-800 transition-all duration-300 shadow-lg hover:shadow-medical backdrop-blur-sm rounded-2xl font-semibold"
-            >
+            </div> : <Button variant="outline" size="default" asChild className="group h-12 px-6 border-2 border-medical-200 bg-white/90 text-medical-700 hover:bg-medical-50 hover:border-medical-300 hover:text-medical-800 transition-all duration-300 shadow-lg hover:shadow-medical backdrop-blur-sm rounded-2xl font-semibold">
               <Link to="/auth">
                 <User className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform duration-300" />
                 <span>Iniciar Sesión</span>
               </Link>
-            </Button>
-          )}
+            </Button>}
         </div>
       </div>
-    </header>
-  );
+    </header>;
 };
-
 export default Header;

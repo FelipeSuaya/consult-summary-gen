@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import AudioRecorder from "@/components/AudioRecorder";
@@ -10,15 +9,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ensureConsultationAudiosBucket } from "@/lib/ensureStorageBucket";
 import { useToast } from "@/components/ui/use-toast";
 import { Activity, User, Stethoscope, Brain, Mic, Shield, Sparkles } from "lucide-react";
-
 const Index = () => {
   const [selectedConsultation, setSelectedConsultation] = useState<ConsultationRecord | null>(null);
   const [newConsultation, setNewConsultation] = useState<ConsultationRecord | null>(null);
   const [showNewConsultation, setShowNewConsultation] = useState(false);
   const [activeTab, setActiveTab] = useState("consultas");
   const [selectedPatientForConsultation, setSelectedPatientForConsultation] = useState<Patient | null>(null);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     ensureConsultationAudiosBucket().then(() => {
       console.log("Storage bucket check completed successfully");
@@ -33,41 +32,48 @@ const Index = () => {
       }
     });
   }, [toast]);
-
   const handleRecordingComplete = (consultation: ConsultationRecord) => {
     console.log("Recording complete, displaying consultation:", consultation.id);
     setNewConsultation(consultation);
     setShowNewConsultation(true);
   };
-
   const handleBack = () => {
     setSelectedConsultation(null);
     setShowNewConsultation(false);
     setSelectedPatientForConsultation(null);
   };
-
   const handleStartConsultationForPatient = (patient: Patient) => {
     console.log("Starting consultation for patient:", patient.id, patient.name);
     setSelectedPatientForConsultation(patient);
     setActiveTab("consultas");
   };
-
-  return (
-    <div className="flex min-h-screen flex-col relative">
+  return <div className="flex min-h-screen flex-col relative">
       {/* Elementos médicos decorativos modernizados */}
       <div className="medical-bg-elements"></div>
       
       {/* Patrón médico sutil modernizado */}
       <div className="fixed inset-0 opacity-30 pointer-events-none">
         <div className="absolute top-20 left-10 w-4 h-4 bg-medical-400/20 rounded-full animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-3 h-3 bg-blue-400/20 rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
-        <div className="absolute bottom-32 left-32 w-5 h-5 bg-medical-300/15 rounded-full animate-pulse" style={{animationDelay: '2s'}}></div>
-        <div className="absolute top-60 left-1/2 w-3 h-3 bg-blue-300/15 rounded-full animate-pulse" style={{animationDelay: '3s'}}></div>
-        <div className="absolute bottom-20 right-40 w-4 h-4 bg-medical-400/10 rounded-full animate-pulse" style={{animationDelay: '4s'}}></div>
+        <div className="absolute top-40 right-20 w-3 h-3 bg-blue-400/20 rounded-full animate-pulse" style={{
+        animationDelay: '1s'
+      }}></div>
+        <div className="absolute bottom-32 left-32 w-5 h-5 bg-medical-300/15 rounded-full animate-pulse" style={{
+        animationDelay: '2s'
+      }}></div>
+        <div className="absolute top-60 left-1/2 w-3 h-3 bg-blue-300/15 rounded-full animate-pulse" style={{
+        animationDelay: '3s'
+      }}></div>
+        <div className="absolute bottom-20 right-40 w-4 h-4 bg-medical-400/10 rounded-full animate-pulse" style={{
+        animationDelay: '4s'
+      }}></div>
         
         {/* Nuevos elementos decorativos */}
-        <div className="absolute top-1/3 right-1/4 w-6 h-6 bg-gradient-to-br from-medical-300/10 to-blue-300/10 rounded-full animate-pulse" style={{animationDelay: '5s'}}></div>
-        <div className="absolute bottom-1/3 left-1/4 w-3 h-3 bg-gradient-to-br from-blue-400/15 to-medical-400/15 rounded-full animate-pulse" style={{animationDelay: '6s'}}></div>
+        <div className="absolute top-1/3 right-1/4 w-6 h-6 bg-gradient-to-br from-medical-300/10 to-blue-300/10 rounded-full animate-pulse" style={{
+        animationDelay: '5s'
+      }}></div>
+        <div className="absolute bottom-1/3 left-1/4 w-3 h-3 bg-gradient-to-br from-blue-400/15 to-medical-400/15 rounded-full animate-pulse" style={{
+        animationDelay: '6s'
+      }}></div>
       </div>
       
       <Header />
@@ -76,22 +82,23 @@ const Index = () => {
         {/* Ondas médicas decorativas ultra-modernizadas */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-gradient-to-br from-medical-200/8 via-medical-300/5 to-transparent rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-gradient-to-tl from-blue-200/6 via-blue-300/4 to-transparent rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
-          <div className="absolute top-1/2 -left-20 w-[400px] h-[400px] bg-gradient-to-r from-medical-100/6 to-transparent rounded-full blur-2xl animate-pulse" style={{animationDelay: '1s'}}></div>
-          <div className="absolute top-1/4 -right-20 w-[350px] h-[350px] bg-gradient-to-l from-blue-100/5 to-transparent rounded-full blur-2xl animate-pulse" style={{animationDelay: '3s'}}></div>
+          <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-gradient-to-tl from-blue-200/6 via-blue-300/4 to-transparent rounded-full blur-3xl animate-pulse" style={{
+          animationDelay: '2s'
+        }}></div>
+          <div className="absolute top-1/2 -left-20 w-[400px] h-[400px] bg-gradient-to-r from-medical-100/6 to-transparent rounded-full blur-2xl animate-pulse" style={{
+          animationDelay: '1s'
+        }}></div>
+          <div className="absolute top-1/4 -right-20 w-[350px] h-[350px] bg-gradient-to-l from-blue-100/5 to-transparent rounded-full blur-2xl animate-pulse" style={{
+          animationDelay: '3s'
+        }}></div>
         </div>
 
         <div className="container relative py-12 md:py-16">
-          {selectedConsultation ? (
-            <div className="animate-fade-in">
+          {selectedConsultation ? <div className="animate-fade-in">
               <ConsultationDetail consultation={selectedConsultation} onBack={handleBack} />
-            </div>
-          ) : showNewConsultation && newConsultation ? (
-            <div className="animate-fade-in">
+            </div> : showNewConsultation && newConsultation ? <div className="animate-fade-in">
               <ConsultationDetail consultation={newConsultation} onBack={handleBack} />
-            </div>
-          ) : (
-            <div className="space-y-12 animate-fade-in">
+            </div> : <div className="space-y-12 animate-fade-in">
               {/* Header de bienvenida ultra-modernizado */}
               <div className="text-center space-y-8 mb-16 relative">
                 <div className="relative inline-block">
@@ -138,21 +145,15 @@ const Index = () => {
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <div className="flex justify-center mb-16">
                   <TabsList className="grid w-fit grid-cols-2 bg-white/80 backdrop-blur-2xl rounded-3xl p-3 shadow-2xl border-2 border-white/60">
-                    <TabsTrigger 
-                      value="consultas" 
-                      className={`medical-tab ${activeTab === 'consultas' ? 'active' : ''}`}
-                    >
-                      <span className="relative z-10 flex items-center gap-3">
+                    <TabsTrigger value="consultas" className={`medical-tab ${activeTab === 'consultas' ? 'active' : ''}`}>
+                      <span className="relative z-10 flex items-center gap-3 text-slate-950">
                         <Activity className="h-5 w-5" />
                         Consultas Médicas
                       </span>
                     </TabsTrigger>
                     
-                    <TabsTrigger 
-                      value="pacientes" 
-                      className={`blue-tab ${activeTab === 'pacientes' ? 'active' : ''}`}
-                    >
-                      <span className="relative z-10 flex items-center gap-3">
+                    <TabsTrigger value="pacientes" className={`blue-tab ${activeTab === 'pacientes' ? 'active' : ''}`}>
+                      <span className="relative z-10 flex items-center gap-3 text-gray-950">
                         <User className="h-5 w-5" />
                         Gestión de Pacientes
                       </span>
@@ -171,13 +172,11 @@ const Index = () => {
                           <h2 className="text-4xl font-bold text-medical-800 mb-4">
                             {selectedPatientForConsultation ? `Nueva Consulta` : "Iniciar Consulta"}
                           </h2>
-                          {selectedPatientForConsultation && (
-                            <div className="medical-gradient-subtle px-8 py-4 rounded-3xl inline-block border-2 border-medical-200/50">
+                          {selectedPatientForConsultation && <div className="medical-gradient-subtle px-8 py-4 rounded-3xl inline-block border-2 border-medical-200/50">
                               <p className="text-xl font-semibold text-medical-700">
                                 Paciente: {selectedPatientForConsultation.name}
                               </p>
-                            </div>
-                          )}
+                            </div>}
                           <p className="text-slate-600 mt-6 text-xl leading-relaxed">
                             Graba y transcribe automáticamente tu consulta médica con IA de última generación
                           </p>
@@ -185,16 +184,11 @@ const Index = () => {
                         
                         <AudioRecorder onRecordingComplete={handleRecordingComplete} preselectedPatient={selectedPatientForConsultation} />
                         
-                        {selectedPatientForConsultation && (
-                          <div className="mt-10 text-center">
-                            <button 
-                              onClick={() => setSelectedPatientForConsultation(null)} 
-                              className="text-medical-600 hover:text-medical-800 font-semibold hover:underline transition-all duration-300 text-xl hover:scale-105 transform"
-                            >
+                        {selectedPatientForConsultation && <div className="mt-10 text-center">
+                            <button onClick={() => setSelectedPatientForConsultation(null)} className="text-medical-600 hover:text-medical-800 font-semibold hover:underline transition-all duration-300 text-xl hover:scale-105 transform">
                               Cambiar paciente
                             </button>
-                          </div>
-                        )}
+                          </div>}
                       </div>
                     </div>
                     
@@ -212,8 +206,7 @@ const Index = () => {
                   </div>
                 </TabsContent>
               </Tabs>
-            </div>
-          )}
+            </div>}
         </div>
       </main>
       
@@ -238,15 +231,15 @@ const Index = () => {
                 <span>Sistema Operativo</span>
               </div>
               <div className="medical-badge">
-                <div className="w-3 h-3 bg-medical-500 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
+                <div className="w-3 h-3 bg-medical-500 rounded-full animate-pulse" style={{
+                animationDelay: '0.5s'
+              }}></div>
                 <span>IA Activa</span>
               </div>
             </div>
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
