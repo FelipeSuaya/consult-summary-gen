@@ -60,14 +60,14 @@ const Index = () => {
       {/* Patrón médico sutil modernizado */}
       <div className="fixed inset-0 opacity-30 pointer-events-none">
         <div className="absolute top-20 left-10 w-4 h-4 bg-medical-400/20 rounded-full animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-3 h-3 bg-emerald-400/20 rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
+        <div className="absolute top-40 right-20 w-3 h-3 bg-blue-400/20 rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
         <div className="absolute bottom-32 left-32 w-5 h-5 bg-medical-300/15 rounded-full animate-pulse" style={{animationDelay: '2s'}}></div>
-        <div className="absolute top-60 left-1/2 w-3 h-3 bg-emerald-300/15 rounded-full animate-pulse" style={{animationDelay: '3s'}}></div>
+        <div className="absolute top-60 left-1/2 w-3 h-3 bg-blue-300/15 rounded-full animate-pulse" style={{animationDelay: '3s'}}></div>
         <div className="absolute bottom-20 right-40 w-4 h-4 bg-medical-400/10 rounded-full animate-pulse" style={{animationDelay: '4s'}}></div>
         
         {/* Nuevos elementos decorativos */}
-        <div className="absolute top-1/3 right-1/4 w-6 h-6 bg-gradient-to-br from-medical-300/10 to-emerald-300/10 rounded-full animate-pulse" style={{animationDelay: '5s'}}></div>
-        <div className="absolute bottom-1/3 left-1/4 w-3 h-3 bg-gradient-to-br from-emerald-400/15 to-medical-400/15 rounded-full animate-pulse" style={{animationDelay: '6s'}}></div>
+        <div className="absolute top-1/3 right-1/4 w-6 h-6 bg-gradient-to-br from-medical-300/10 to-blue-300/10 rounded-full animate-pulse" style={{animationDelay: '5s'}}></div>
+        <div className="absolute bottom-1/3 left-1/4 w-3 h-3 bg-gradient-to-br from-blue-400/15 to-medical-400/15 rounded-full animate-pulse" style={{animationDelay: '6s'}}></div>
       </div>
       
       <Header />
@@ -76,9 +76,9 @@ const Index = () => {
         {/* Ondas médicas decorativas ultra-modernizadas */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-gradient-to-br from-medical-200/8 via-medical-300/5 to-transparent rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-gradient-to-tl from-emerald-200/6 via-emerald-300/4 to-transparent rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
+          <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-gradient-to-tl from-blue-200/6 via-blue-300/4 to-transparent rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
           <div className="absolute top-1/2 -left-20 w-[400px] h-[400px] bg-gradient-to-r from-medical-100/6 to-transparent rounded-full blur-2xl animate-pulse" style={{animationDelay: '1s'}}></div>
-          <div className="absolute top-1/4 -right-20 w-[350px] h-[350px] bg-gradient-to-l from-emerald-100/5 to-transparent rounded-full blur-2xl animate-pulse" style={{animationDelay: '3s'}}></div>
+          <div className="absolute top-1/4 -right-20 w-[350px] h-[350px] bg-gradient-to-l from-blue-100/5 to-transparent rounded-full blur-2xl animate-pulse" style={{animationDelay: '3s'}}></div>
         </div>
 
         <div className="container relative py-12 md:py-16">
@@ -95,10 +95,10 @@ const Index = () => {
               {/* Header de bienvenida ultra-modernizado */}
               <div className="text-center space-y-8 mb-16 relative">
                 <div className="relative inline-block">
-                  <h1 className="text-6xl md:text-8xl font-bold tracking-tight bg-gradient-to-r from-medical-700 via-medical-600 to-emerald-600 bg-clip-text text-transparent relative z-10">
+                  <h1 className="text-6xl md:text-8xl font-bold tracking-tight bg-gradient-to-r from-medical-700 via-medical-600 to-blue-600 bg-clip-text text-transparent relative z-10">
                     ConsultSummary
                   </h1>
-                  <div className="absolute inset-0 bg-gradient-to-r from-medical-200/30 via-medical-300/30 to-emerald-200/30 blur-3xl -z-10 scale-110 animate-pulse"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-medical-200/30 via-medical-300/30 to-blue-200/30 blur-3xl -z-10 scale-110 animate-pulse"></div>
                 </div>
                 
                 <p className="text-2xl text-slate-600 max-w-4xl mx-auto leading-relaxed font-medium">
@@ -108,9 +108,9 @@ const Index = () => {
                     <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-medical-400 to-medical-600 rounded-full"></div>
                   </span>{" "}
                   y{" "}
-                  <span className="font-bold text-emerald-700 relative">
+                  <span className="font-bold text-blue-700 relative">
                     resúmenes automáticos
-                    <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full"></div>
+                    <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full"></div>
                   </span>{" "}
                   impulsados por inteligencia artificial
                 </p>
@@ -120,7 +120,7 @@ const Index = () => {
                     <Brain className="w-4 h-4" />
                     <span>IA Médica Avanzada</span>
                   </div>
-                  <div className="emerald-badge">
+                  <div className="blue-badge">
                     <Mic className="w-4 h-4" />
                     <span>Transcripción en Tiempo Real</span>
                   </div>
@@ -128,7 +128,7 @@ const Index = () => {
                     <Shield className="w-4 h-4" />
                     <span>Datos Seguros</span>
                   </div>
-                  <div className="emerald-badge">
+                  <div className="blue-badge">
                     <Sparkles className="w-4 h-4" />
                     <span>Análisis Inteligente</span>
                   </div>
@@ -150,7 +150,7 @@ const Index = () => {
                     
                     <TabsTrigger 
                       value="pacientes" 
-                      className={`emerald-tab ${activeTab === 'pacientes' ? 'active' : ''}`}
+                      className={`blue-tab ${activeTab === 'pacientes' ? 'active' : ''}`}
                     >
                       <span className="relative z-10 flex items-center gap-3">
                         <User className="h-5 w-5" />
@@ -218,12 +218,12 @@ const Index = () => {
       </main>
       
       <footer className="border-t border-white/40 bg-white/90 backdrop-blur-2xl py-12 md:py-16 relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-medical-500/2 via-transparent to-emerald-500/2"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-medical-500/2 via-transparent to-blue-500/2"></div>
         <div className="container relative">
           <div className="flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="text-center md:text-left">
               <p className="text-2xl font-medium">
-                <span className="font-bold bg-gradient-to-r from-medical-600 to-emerald-600 bg-clip-text text-transparent">
+                <span className="font-bold bg-gradient-to-r from-medical-600 to-blue-600 bg-clip-text text-transparent">
                   ConsultSummary
                 </span>{" "}
                 <span className="text-slate-600">— Inteligencia Artificial Médica Profesional</span>
@@ -233,8 +233,8 @@ const Index = () => {
               </p>
             </div>
             <div className="flex items-center gap-4 text-sm">
-              <div className="emerald-badge">
-                <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+              <div className="blue-badge">
+                <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
                 <span>Sistema Operativo</span>
               </div>
               <div className="medical-badge">
