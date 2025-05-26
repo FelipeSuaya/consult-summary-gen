@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import AudioRecorder from "@/components/AudioRecorder";
@@ -8,8 +9,7 @@ import { ConsultationRecord, Patient } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ensureConsultationAudiosBucket } from "@/lib/ensureStorageBucket";
 import { useToast } from "@/components/ui/use-toast";
-import Activity from "@/components/icons/Activity";
-import User from "@/components/icons/User";
+import { Activity, User } from "lucide-react";
 
 const Index = () => {
   const [selectedConsultation, setSelectedConsultation] = useState<ConsultationRecord | null>(null);
