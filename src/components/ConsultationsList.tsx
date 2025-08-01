@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Patient } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getConsultationsByPatient } from "@/lib/storage";
 import { getPatients } from "@/lib/patients";
 import { format } from "date-fns";
@@ -12,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { TrendingUp, Calendar, Stethoscope, User, BarChart3 } from "lucide-react";
+import { TrendingUp, Calendar, Stethoscope, User, BarChart3, Bot } from "lucide-react";
+import MedicalAnalyticsChat from "@/components/MedicalAnalyticsChat";
 
 interface ConsultationsListProps {
   onConsultationSelect: (consultation: any) => void;
@@ -206,147 +208,170 @@ const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => 
       )}
 
       {consultations.length > 0 && (
-        <div className="space-y-8">
-          {/* Summary Cards */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 rounded-lg bg-gradient-to-r from-medical-50 to-medical-100/50 border border-medical-200/50">
-              <div className="flex items-center gap-2 mb-1">
-                <Calendar className="h-4 w-4 text-medical-600" />
-                <span className="text-sm font-medium text-medical-700">Total Consultas</span>
-              </div>
-              <p className="text-2xl font-bold text-medical-900">{consultations.length}</p>
-            </div>
-            
-            <div className="p-4 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100/50 border border-slate-200/50">
-              <div className="flex items-center gap-2 mb-1">
-                <TrendingUp className="h-4 w-4 text-slate-600" />
-                <span className="text-sm font-medium text-slate-700">Última Consulta</span>
-              </div>
-              <p className="text-sm font-bold text-slate-900">
-                {format(new Date(consultations[0].dateTime), "dd MMM", { locale: es })}
-              </p>
-            </div>
-          </div>
+        <Tabs defaultValue="charts" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="charts" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Gráficos
+            </TabsTrigger>
+            <TabsTrigger value="ai-analysis" className="flex items-center gap-2">
+              <Bot className="h-4 w-4" />
+              Análisis IA
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Monthly Consultations Chart */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-medical-600" />
-              Consultas Mensuales - {new Date().getFullYear()}
-            </h3>
-            <div className="h-64 bg-background rounded-lg border p-4">
-              <ChartContainer
-                config={{
-                  consultas: {
-                    label: "Consultas",
-                    color: "#0588F0"
-                  }
-                }}
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
-                    <XAxis 
-                      dataKey="month" 
-                      fontSize={12}
-                      stroke="hsl(var(--muted-foreground))"
-                    />
-                    <YAxis 
-                      allowDecimals={false}
-                      fontSize={12}
-                      stroke="hsl(var(--muted-foreground))"
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar 
-                      dataKey="consultas" 
-                      fill="#0588F0" 
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </div>
-          </div>
-
-          {/* Symptoms and Diagnosis Charts */}
-          {(symptomsData.length > 0 || diagnosisData.length > 0) && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {symptomsData.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-foreground">
-                    Síntomas Frecuentes
-                  </h3>
-                  <div className="h-64 bg-background rounded-lg border p-4">
-                    <ChartContainer
-                      config={{
-                        value: {
-                          label: "Frecuencia"
-                        }
-                      }}
-                    >
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={symptomsData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                            outerRadius={60}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {symptomsData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <ChartTooltip content={<ChartTooltipContent />} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </ChartContainer>
-                  </div>
+          <TabsContent value="charts" className="space-y-8">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 rounded-lg bg-gradient-to-r from-medical-50 to-medical-100/50 border border-medical-200/50">
+                <div className="flex items-center gap-2 mb-1">
+                  <Calendar className="h-4 w-4 text-medical-600" />
+                  <span className="text-sm font-medium text-medical-700">Total Consultas</span>
                 </div>
-              )}
-
-              {diagnosisData.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-foreground">
-                    Diagnósticos Frecuentes
-                  </h3>
-                  <div className="h-64 bg-background rounded-lg border p-4">
-                    <ChartContainer
-                      config={{
-                        value: {
-                          label: "Frecuencia"
-                        }
-                      }}
-                    >
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={diagnosisData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                            outerRadius={60}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {diagnosisData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[(index + 3) % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <ChartTooltip content={<ChartTooltipContent />} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </ChartContainer>
-                  </div>
+                <p className="text-2xl font-bold text-medical-900">{consultations.length}</p>
+              </div>
+              
+              <div className="p-4 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100/50 border border-slate-200/50">
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp className="h-4 w-4 text-slate-600" />
+                  <span className="text-sm font-medium text-slate-700">Última Consulta</span>
                 </div>
-              )}
+                <p className="text-sm font-bold text-slate-900">
+                  {format(new Date(consultations[0].dateTime), "dd MMM", { locale: es })}
+                </p>
+              </div>
             </div>
-          )}
-        </div>
+
+            {/* Monthly Consultations Chart */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-medical-600" />
+                Consultas Mensuales - {new Date().getFullYear()}
+              </h3>
+              <div className="h-64 bg-background rounded-lg border p-4">
+                <ChartContainer
+                  config={{
+                    consultas: {
+                      label: "Consultas",
+                      color: "#0588F0"
+                    }
+                  }}
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                      <XAxis 
+                        dataKey="month" 
+                        fontSize={12}
+                        stroke="hsl(var(--muted-foreground))"
+                      />
+                      <YAxis 
+                        allowDecimals={false}
+                        fontSize={12}
+                        stroke="hsl(var(--muted-foreground))"
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar 
+                        dataKey="consultas" 
+                        fill="#0588F0" 
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </div>
+            </div>
+
+            {/* Symptoms and Diagnosis Charts */}
+            {(symptomsData.length > 0 || diagnosisData.length > 0) && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {symptomsData.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-foreground">
+                      Síntomas Frecuentes
+                    </h3>
+                    <div className="h-64 bg-background rounded-lg border p-4">
+                      <ChartContainer
+                        config={{
+                          value: {
+                            label: "Frecuencia"
+                          }
+                        }}
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={symptomsData}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                              outerRadius={60}
+                              fill="#8884d8"
+                              dataKey="value"
+                            >
+                              {symptomsData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <ChartTooltip content={<ChartTooltipContent />} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
+                    </div>
+                  </div>
+                )}
+
+                {diagnosisData.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-foreground">
+                      Diagnósticos Frecuentes
+                    </h3>
+                    <div className="h-64 bg-background rounded-lg border p-4">
+                      <ChartContainer
+                        config={{
+                          value: {
+                            label: "Frecuencia"
+                          }
+                        }}
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={diagnosisData}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                              outerRadius={60}
+                              fill="#8884d8"
+                              dataKey="value"
+                            >
+                              {diagnosisData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[(index + 3) % COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <ChartTooltip content={<ChartTooltipContent />} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="ai-analysis">
+            <MedicalAnalyticsChat
+              selectedPatientId={selectedPatientId}
+              consultations={consultations}
+              symptomsData={symptomsData}
+              diagnosisData={diagnosisData}
+              chartData={chartData}
+            />
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );
