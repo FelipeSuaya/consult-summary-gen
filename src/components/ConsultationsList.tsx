@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Patient } from "@/types";
@@ -13,12 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { TrendingUp, Calendar, Stethoscope, User, BarChart3 } from "lucide-react";
 
 interface ConsultationsListProps {
   onConsultationSelect: (consultation: any) => void;
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+const COLORS = ['#0588F0', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => {
@@ -28,7 +28,6 @@ const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => 
   const [symptomsData, setSymptomsData] = useState<any[]>([]);
   const [diagnosisData, setDiagnosisData] = useState<any[]>([]);
   
-  // Get patients list - Fixed the query function to properly handle the context parameter
   const { 
     data: patients = [],
     isLoading: isLoadingPatients
@@ -38,7 +37,6 @@ const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => 
     enabled: !!user,
   });
 
-  // Get consultations for selected patient
   const { 
     data: consultations = [],
     isLoading: isLoadingConsultations,
@@ -50,19 +48,15 @@ const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => 
     enabled: !!selectedPatientId,
   });
 
-  // Process consultation data for charts when consultations change
   useEffect(() => {
     if (consultations && consultations.length > 0) {
-      // Process monthly consultations data
       const consultationsByMonth: Record<number, number> = {};
       const currentYear = new Date().getFullYear();
       
-      // Initialize all months with zero
       for (let i = 0; i < 12; i++) {
         consultationsByMonth[i] = 0;
       }
       
-      // Count consultations by month for current year
       consultations.forEach(consultation => {
         const date = new Date(consultation.dateTime);
         if (date.getFullYear() === currentYear) {
@@ -71,7 +65,6 @@ const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => 
         }
       });
       
-      // Transform to chart format
       const monthlyData = Object.keys(consultationsByMonth).map(month => ({
         month: MONTHS[parseInt(month)],
         consultas: consultationsByMonth[parseInt(month)],
@@ -79,11 +72,9 @@ const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => 
       
       setChartData(monthlyData);
       
-      // Extract clinical data for pie charts
       const symptomsMap: Record<string, number> = {};
       const diagnosisMap: Record<string, number> = {};
       
-      // Key clinical terms to look for
       const keySymptoms = [
         "dolor", "fiebre", "cefalea", "tos", "disnea", "náuseas", "vómitos", 
         "diarrea", "astenia", "fatiga", "mareo", "vértigo", "disuria", 
@@ -101,24 +92,19 @@ const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => 
         if (consultation.summary) {
           const lowerSummary = consultation.summary.toLowerCase();
           
-          // Extract motivo de consulta and diagnóstico presuntivo sections
           const motivoSection = lowerSummary.includes("motivo de consulta") ? 
             lowerSummary.split("motivo de consulta:")[1]?.split(/diagnóstico|antecedentes|exámenes/i)[0] || "" : "";
             
           const diagnosticoSection = lowerSummary.includes("diagnóstico presuntivo") ? 
             lowerSummary.split("diagnóstico presuntivo:")[1]?.split(/indicaciones|exámenes solicitados/i)[0] || "" : "";
           
-          // Check for symptoms in motivo de consulta
           keySymptoms.forEach(symptom => {
-            // Prioriza búsqueda en sección de motivo de consulta
             if ((motivoSection && motivoSection.includes(symptom)) || lowerSummary.includes(symptom)) {
               symptomsMap[symptom] = (symptomsMap[symptom] || 0) + 1;
             }
           });
           
-          // Check for diagnosis in diagnóstico presuntivo
           keyDiagnosis.forEach(diagnosis => {
-            // Prioriza búsqueda en sección de diagnóstico
             if ((diagnosticoSection && diagnosticoSection.includes(diagnosis)) || lowerSummary.includes(diagnosis)) {
               diagnosisMap[diagnosis] = (diagnosisMap[diagnosis] || 0) + 1;
             }
@@ -126,25 +112,23 @@ const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => 
         }
       });
       
-      // Transform symptoms to chart data
       const symptomsChartData = Object.keys(symptomsMap)
         .map(symptom => ({
           name: symptom.charAt(0).toUpperCase() + symptom.slice(1),
           value: symptomsMap[symptom]
         }))
-        .sort((a, b) => b.value - a.value) // Sort by frequency
-        .slice(0, 5); // Get top 5 symptoms
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5);
       
       setSymptomsData(symptomsChartData);
       
-      // Transform diagnosis to chart data
       const diagnosisChartData = Object.keys(diagnosisMap)
         .map(diagnosis => ({
           name: diagnosis.charAt(0).toUpperCase() + diagnosis.slice(1),
           value: diagnosisMap[diagnosis]
         }))
-        .sort((a, b) => b.value - a.value) // Sort by frequency
-        .slice(0, 5); // Get top 5 diagnoses
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5);
       
       setDiagnosisData(diagnosisChartData);
     } else {
@@ -160,89 +144,139 @@ const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => 
 
   if (isLoadingPatients) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Estadísticas de Paciente</CardTitle>
-          <CardDescription>Cargando pacientes...</CardDescription>
-        </CardHeader>
-      </Card>
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <BarChart3 className="h-4 w-4 animate-spin" />
+          Cargando información...
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Estadísticas de Paciente</CardTitle>
-        <CardDescription>
-          Seleccione un paciente para ver sus estadísticas de consultas
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="patient-select">Seleccionar Paciente</Label>
-            <Select
-              value={selectedPatientId || ""}
-              onValueChange={handlePatientChange}
-            >
-              <SelectTrigger id="patient-select">
-                <SelectValue placeholder="Seleccionar paciente" />
-              </SelectTrigger>
-              <SelectContent>
-                {patients.map((patient: Patient) => (
-                  <SelectItem key={patient.id} value={patient.id}>
-                    {patient.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <Label htmlFor="patient-select" className="text-sm font-medium">
+          Seleccionar Paciente para Análisis
+        </Label>
+        <Select value={selectedPatientId || ""} onValueChange={handlePatientChange}>
+          <SelectTrigger id="patient-select" className="bg-background">
+            <SelectValue placeholder="Seleccionar paciente" />
+          </SelectTrigger>
+          <SelectContent>
+            {patients.map((patient: Patient) => (
+              <SelectItem key={patient.id} value={patient.id}>
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  {patient.name}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {isLoadingConsultations && (
+        <div className="flex items-center justify-center py-8">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <BarChart3 className="h-4 w-4 animate-spin" />
+            Cargando datos estadísticos...
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+          <div className="flex items-center gap-2 text-destructive text-sm">
+            <Stethoscope className="h-4 w-4" />
+            Error al cargar los datos. Por favor, intente de nuevo.
+          </div>
+        </div>
+      )}
+
+      {selectedPatientId && !isLoadingConsultations && consultations.length === 0 && (
+        <div className="text-center py-8">
+          <div className="p-4 rounded-lg bg-muted/30">
+            <Stethoscope className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">
+              No hay consultas registradas para este paciente.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {consultations.length > 0 && (
+        <div className="space-y-8">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 rounded-lg bg-gradient-to-r from-medical-50 to-medical-100/50 border border-medical-200/50">
+              <div className="flex items-center gap-2 mb-1">
+                <Calendar className="h-4 w-4 text-medical-600" />
+                <span className="text-sm font-medium text-medical-700">Total Consultas</span>
+              </div>
+              <p className="text-2xl font-bold text-medical-900">{consultations.length}</p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100/50 border border-slate-200/50">
+              <div className="flex items-center gap-2 mb-1">
+                <TrendingUp className="h-4 w-4 text-slate-600" />
+                <span className="text-sm font-medium text-slate-700">Última Consulta</span>
+              </div>
+              <p className="text-sm font-bold text-slate-900">
+                {format(new Date(consultations[0].dateTime), "dd MMM", { locale: es })}
+              </p>
+            </div>
           </div>
 
-          {isLoadingConsultations && <div className="text-center py-4">Cargando datos...</div>}
-
-          {error && (
-            <div className="text-red-500 text-center py-4">
-              Error al cargar los datos. Por favor, intente de nuevo.
+          {/* Monthly Consultations Chart */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-medical-600" />
+              Consultas Mensuales - {new Date().getFullYear()}
+            </h3>
+            <div className="h-64 bg-background rounded-lg border p-4">
+              <ChartContainer
+                config={{
+                  consultas: {
+                    label: "Consultas",
+                    color: "#0588F0"
+                  }
+                }}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                    <XAxis 
+                      dataKey="month" 
+                      fontSize={12}
+                      stroke="hsl(var(--muted-foreground))"
+                    />
+                    <YAxis 
+                      allowDecimals={false}
+                      fontSize={12}
+                      stroke="hsl(var(--muted-foreground))"
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar 
+                      dataKey="consultas" 
+                      fill="#0588F0" 
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
             </div>
-          )}
+          </div>
 
-          {selectedPatientId && !isLoadingConsultations && consultations.length === 0 && (
-            <div className="text-center py-4">
-              No hay consultas registradas para este paciente.
-            </div>
-          )}
-
-          {consultations.length > 0 && (
-            <div className="space-y-8">
-              <div>
-                <h3 className="text-lg font-medium mb-4">Consultas por Mes (Año Actual)</h3>
-                <div className="h-80">
-                  <ChartContainer
-                    config={{
-                      consultas: {
-                        label: "Consultas",
-                        color: "#2563eb"
-                      }
-                    }}
-                  >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis allowDecimals={false} />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Legend />
-                        <Bar dataKey="consultas" fill="#2563eb" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                </div>
-              </div>
-
+          {/* Symptoms and Diagnosis Charts */}
+          {(symptomsData.length > 0 || diagnosisData.length > 0) && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {symptomsData.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-medium mb-4">Motivos de Consulta Frecuentes</h3>
-                  <div className="h-80">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-foreground">
+                    Síntomas Frecuentes
+                  </h3>
+                  <div className="h-64 bg-background rounded-lg border p-4">
                     <ChartContainer
                       config={{
                         value: {
@@ -256,9 +290,9 @@ const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => 
                             data={symptomsData}
                             cx="50%"
                             cy="50%"
-                            labelLine
+                            labelLine={false}
                             label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                            outerRadius={80}
+                            outerRadius={60}
                             fill="#8884d8"
                             dataKey="value"
                           >
@@ -275,9 +309,11 @@ const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => 
               )}
 
               {diagnosisData.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-medium mb-4">Diagnósticos Presuntivos Frecuentes</h3>
-                  <div className="h-80">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-foreground">
+                    Diagnósticos Frecuentes
+                  </h3>
+                  <div className="h-64 bg-background rounded-lg border p-4">
                     <ChartContainer
                       config={{
                         value: {
@@ -291,9 +327,9 @@ const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => 
                             data={diagnosisData}
                             cx="50%"
                             cy="50%"
-                            labelLine
+                            labelLine={false}
                             label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                            outerRadius={80}
+                            outerRadius={60}
                             fill="#8884d8"
                             dataKey="value"
                           >
@@ -308,23 +344,11 @@ const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => 
                   </div>
                 </div>
               )}
-
-              <div>
-                <h3 className="text-lg font-medium mb-2">Resumen</h3>
-                <p>Total de consultas: <strong>{consultations.length}</strong></p>
-                <p>Última consulta: <strong>{
-                  format(
-                    new Date(consultations[0].dateTime), 
-                    "PPpp", 
-                    { locale: es }
-                  )
-                }</strong></p>
-              </div>
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 };
 

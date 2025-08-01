@@ -9,6 +9,8 @@ import { ConsultationRecord, Patient } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ensureConsultationAudiosBucket } from "@/lib/ensureStorageBucket";
 import { useToast } from "@/components/ui/use-toast";
+import { Card, CardContent } from "@/components/ui/card";
+import { Stethoscope, Users, BarChart3, Sparkles } from "lucide-react";
 
 const Index = () => {
   const [selectedConsultation, setSelectedConsultation] = useState<ConsultationRecord | null>(null);
@@ -16,9 +18,7 @@ const Index = () => {
   const [showNewConsultation, setShowNewConsultation] = useState(false);
   const [activeTab, setActiveTab] = useState("consultas");
   const [selectedPatientForConsultation, setSelectedPatientForConsultation] = useState<Patient | null>(null);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
 
   useEffect(() => {
     ensureConsultationAudiosBucket().then(() => {
@@ -54,94 +54,142 @@ const Index = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-medical-50/30">
       <Header />
       
-      <main className="flex-1">
-        <div className="container py-6 md:py-8 bg-transparent">
-          {selectedConsultation ? (
+      <main className="container py-8">
+        {selectedConsultation ? (
+          <div className="animate-in fade-in-0 slide-in-from-right-4 duration-500">
             <ConsultationDetail consultation={selectedConsultation} onBack={handleBack} />
-          ) : showNewConsultation && newConsultation ? (
+          </div>
+        ) : showNewConsultation && newConsultation ? (
+          <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
             <ConsultationDetail consultation={newConsultation} onBack={handleBack} />
-          ) : (
-            <div className="space-y-6">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 bg-medical-100 rounded-full p-1">
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {/* Hero Section */}
+            <div className="text-center py-8">
+              <div className="inline-flex items-center gap-2 bg-medical-50 text-medical-700 px-4 py-2 rounded-full text-sm font-medium mb-4">
+                <Sparkles className="h-4 w-4" />
+                Plataforma de Documentación Médica IA
+              </div>
+              <h1 className="text-4xl font-bold text-foreground mb-3 bg-gradient-to-r from-medical-700 via-medical-600 to-medical-800 bg-clip-text text-transparent">
+                Consultas Médicas Inteligentes
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Transcribe, resume y organiza tus consultas médicas de forma automática con tecnología de inteligencia artificial
+              </p>
+            </div>
+
+            {/* Navigation Tabs */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <div className="flex justify-center mb-8">
+                <TabsList className="grid grid-cols-2 bg-card shadow-sm border p-1.5 h-auto">
                   <TabsTrigger 
                     value="consultas" 
-                    className="
-                      data-[state=active]:bg-medical-600 data-[state=active]:text-white 
-                      text-medical-700 
-                      rounded-full 
-                      transition-all 
-                      duration-300 
-                      ease-in-out 
-                      hover:bg-medical-500/20
-                      py-2 
-                      font-medium
-                      data-[state=active]:shadow-md
-                    "
+                    className="flex items-center gap-2 px-6 py-3 data-[state=active]:bg-medical-500 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-md"
                   >
-                    Consultas
+                    <Stethoscope className="h-4 w-4" />
+                    <span className="font-medium">Consultas</span>
                   </TabsTrigger>
                   
                   <TabsTrigger 
                     value="pacientes" 
-                    className="
-                      data-[state=active]:bg-medical-600 data-[state=active]:text-white 
-                      text-medical-700 
-                      rounded-full 
-                      transition-all 
-                      duration-300 
-                      ease-in-out 
-                      hover:bg-medical-500/20
-                      py-2 
-                      font-medium
-                      data-[state=active]:shadow-md
-                    "
+                    className="flex items-center gap-2 px-6 py-3 data-[state=active]:bg-medical-500 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-md"
                   >
-                    Pacientes
+                    <Users className="h-4 w-4" />
+                    <span className="font-medium">Pacientes</span>
                   </TabsTrigger>
                 </TabsList>
-                
-                <TabsContent value="consultas">
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-6">
-                    <div className="md:col-span-5 space-y-6">
-                      <div>
-                        <h2 className="text-xl font-medium text-medical-900 mb-4">
-                          {selectedPatientForConsultation ? `Nueva Consulta para ${selectedPatientForConsultation.name}` : "Nueva Consulta"}
-                        </h2>
-                        <AudioRecorder onRecordingComplete={handleRecordingComplete} preselectedPatient={selectedPatientForConsultation} />
-                        {selectedPatientForConsultation && <div className="mt-4">
-                            <button onClick={() => setSelectedPatientForConsultation(null)} className="text-sm text-blue-600 hover:text-blue-800">
+              </div>
+              
+              <TabsContent value="consultas" className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+                <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
+                  {/* Recording Section */}
+                  <div className="xl:col-span-2">
+                    <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-slate-50/50">
+                      <CardContent className="p-6">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="p-2 bg-medical-100 rounded-lg">
+                            <Stethoscope className="h-5 w-5 text-medical-600" />
+                          </div>
+                          <div>
+                            <h2 className="text-xl font-bold text-foreground">
+                              {selectedPatientForConsultation ? `Nueva Consulta` : "Nueva Consulta"}
+                            </h2>
+                            {selectedPatientForConsultation && (
+                              <p className="text-sm text-medical-600 font-medium">
+                                Paciente: {selectedPatientForConsultation.name}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <AudioRecorder 
+                          onRecordingComplete={handleRecordingComplete} 
+                          preselectedPatient={selectedPatientForConsultation} 
+                        />
+                        
+                        {selectedPatientForConsultation && (
+                          <div className="mt-4 pt-4 border-t border-border/50">
+                            <button 
+                              onClick={() => setSelectedPatientForConsultation(null)} 
+                              className="text-sm text-medical-600 hover:text-medical-700 hover:underline transition-colors"
+                            >
                               Cambiar paciente
                             </button>
-                          </div>}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  {/* Statistics Section */}
+                  <div className="xl:col-span-3">
+                    <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-slate-50/50 h-full">
+                      <CardContent className="p-6">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="p-2 bg-medical-100 rounded-lg">
+                            <BarChart3 className="h-5 w-5 text-medical-600" />
+                          </div>
+                          <h2 className="text-xl font-bold text-foreground">Estadísticas</h2>
+                        </div>
+                        <ConsultationsList onConsultationSelect={setSelectedConsultation} />
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="pacientes" className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+                <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-slate-50/50">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="p-2 bg-medical-100 rounded-lg">
+                        <Users className="h-5 w-5 text-medical-600" />
                       </div>
+                      <h2 className="text-xl font-bold text-foreground">Gestión de Pacientes</h2>
                     </div>
-                    
-                    <div className="md:col-span-7 space-y-6">
-                      <ConsultationsList onConsultationSelect={setSelectedConsultation} />
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="pacientes">
-                  <div className="mt-6">
                     <PatientsList onStartConsultation={handleStartConsultationForPatient} />
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
-          )}
-        </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+        )}
       </main>
       
-      <footer className="border-t py-4 md:py-6">
-        <div className="container">
-          <p className="text-center text-sm text-gray-500">
-            ConsultSummary — Herramienta de Transcripción y Resumen Médico
-          </p>
+      <footer className="border-t border-border/40 bg-card/50 backdrop-blur-sm mt-16">
+        <div className="container py-8">
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">
+              © 2024 ConsultSummary — Plataforma de Documentación Médica con IA
+            </p>
+            <p className="text-xs text-muted-foreground/70 mt-1">
+              Desarrollado para profesionales de la salud
+            </p>
+          </div>
         </div>
       </footer>
     </div>
