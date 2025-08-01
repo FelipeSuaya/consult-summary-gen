@@ -22,66 +22,95 @@ export const sendMedicalAnalyticsQuery = async (payload: MedicalAnalyticsPayload
   const { webhookUrl, selectedPatientId, consultations, symptomsData, diagnosisData, chartData, question } = payload;
 
   try {
-    console.log("Enviando consulta de análisis médico a N8N");
+    console.log("🚀 Enviando consulta de análisis médico a N8N");
+    console.log("📊 Datos del payload:", {
+      question,
+      patientId: selectedPatientId,
+      consultationsCount: consultations.length,
+      symptomsCount: symptomsData.length,
+      diagnosisCount: diagnosisData.length
+    });
 
-    // Preparar datos del paciente
+    // Preparar datos del paciente seleccionado
     const patientData = {
       id: selectedPatientId,
       totalConsultations: consultations.length,
-      lastConsultationDate: consultations.length > 0 ? consultations[0].dateTime : null
+      lastConsultationDate: consultations.length > 0 ? consultations[0].dateTime : null,
+      firstConsultationDate: consultations.length > 0 ? consultations[consultations.length - 1].dateTime : null
     };
 
-    // Preparar resúmenes de consultas con datos estructurados
+    // Preparar TODOS los resúmenes y transcripciones del paciente para análisis IA
     const consultationSummaries = consultations.map(consultation => ({
       id: consultation.id,
       date: consultation.dateTime,
+      patientName: consultation.patientName,
+      // DATOS CLAVE PARA IA: Resúmenes médicos y transcripciones completas
       summary: consultation.summary || '',
       transcription: consultation.transcription || '',
-      patientName: consultation.patientName
+      // Datos adicionales del paciente si están disponibles
+      patientData: consultation.patientData || {}
     }));
 
-    // Preparar contexto con patrones y frecuencias
+    // Contexto enriquecido con estadísticas para análisis inteligente
     const context = {
+      // Frecuencias de síntomas extraídos de resúmenes
       symptomsFrequency: symptomsData.reduce((acc, item) => {
         acc[item.name] = item.value;
         return acc;
       }, {} as Record<string, number>),
       
+      // Frecuencias de diagnósticos extraídos de resúmenes  
       diagnosisFrequency: diagnosisData.reduce((acc, item) => {
         acc[item.name] = item.value;
         return acc;
       }, {} as Record<string, number>),
       
+      // Patrones temporales mensuales
       monthlyPattern: chartData.map(item => ({
         month: item.month,
         consultations: item.consultas
       })),
 
+      // Metadatos para análisis temporal
       totalConsultations: consultations.length,
       dateRange: {
         from: consultations.length > 0 ? consultations[consultations.length - 1].dateTime : null,
         to: consultations.length > 0 ? consultations[0].dateTime : null
-      }
+      },
+
+      // Estadísticas adicionales para contexto IA
+      averageConsultationsPerMonth: consultations.length > 0 ? 
+        chartData.reduce((sum, item) => sum + item.consultas, 0) / chartData.length : 0,
+      mostFrequentSymptom: symptomsData.length > 0 ? symptomsData[0].name : null,
+      mostFrequentDiagnosis: diagnosisData.length > 0 ? diagnosisData[0].name : null
     };
 
-    // Estructura de datos que se enviará a N8N
+    // Estructura optimizada para el webhook N8N
     const requestPayload = {
       question,
       patient: patientData,
-      consultations: consultationSummaries,
-      context,
-      timestamp: new Date().toISOString(),
-      requestId: `analytics_${Date.now()}`
+      consultations: consultationSummaries, // ← TODOS los resúmenes y transcripciones
+      context, // ← Estadísticas y patrones para análisis inteligente
+      metadata: {
+        timestamp: new Date().toISOString(),
+        requestId: `medical_analytics_${Date.now()}`,
+        version: "1.0",
+        language: "es"
+      }
     };
 
-    // Configurar timeout de 30 segundos
+    console.log("📤 Payload completo para N8N:", JSON.stringify(requestPayload, null, 2));
+
+    // Configurar timeout de 45 segundos para dar tiempo a la IA
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), 45000);
 
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'Lovable-Medical-Analytics/1.0'
       },
       body: JSON.stringify(requestPayload),
       signal: controller.signal,
@@ -89,35 +118,51 @@ export const sendMedicalAnalyticsQuery = async (payload: MedicalAnalyticsPayload
 
     clearTimeout(timeoutId);
 
-    console.log("Respuesta del webhook N8N:", response.status, response.statusText);
+    console.log("📥 Respuesta del webhook N8N:", {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries())
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Error del servidor N8N:", errorText);
-      throw new Error(`Error del servidor: ${response.status} ${response.statusText}`);
+      console.error("❌ Error del servidor N8N:", errorText);
+      throw new Error(`Error del webhook N8N: ${response.status} ${response.statusText}`);
     }
 
     const responseData = await response.json();
-    console.log('Datos recibidos del análisis médico:', responseData);
+    console.log('✅ Análisis médico completado:', responseData);
+
+    // Validar estructura de respuesta esperada
+    if (responseData.success === false) {
+      throw new Error(responseData.error || 'El webhook N8N reportó un error');
+    }
+
+    if (!responseData.data?.response) {
+      throw new Error('Respuesta inválida del webhook: falta el campo data.response');
+    }
 
     return {
       success: true,
-      data: responseData
+      data: {
+        response: responseData.data.response,
+        analysis: responseData.data.analysis || null
+      }
     };
 
   } catch (error) {
     if (error.name === 'AbortError') {
-      console.log('La consulta de análisis tardó más de lo esperado');
+      console.log('⏰ Timeout: El análisis médico tardó más de 45 segundos');
       return {
         success: false,
-        error: 'La consulta tardó más de lo esperado. Intenta de nuevo.'
+        error: 'El análisis médico está tardando más de lo esperado. La IA está procesando muchos datos históricos. Intenta de nuevo en unos momentos.'
       };
     }
 
-    console.error('Error enviando consulta de análisis médico:', error);
+    console.error('💥 Error en sendMedicalAnalyticsQuery:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido al procesar la consulta'
+      error: error instanceof Error ? error.message : 'Error desconocido al procesar la consulta médica'
     };
   }
 };
