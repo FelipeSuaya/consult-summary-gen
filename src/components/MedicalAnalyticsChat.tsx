@@ -90,6 +90,17 @@ const MedicalAnalyticsChat = ({
     return true;
   };
 
+  // Función para limpiar la respuesta de la IA
+  const cleanAIResponse = (response: string): string => {
+    if (!response) return '';
+    
+    // Remover caracteres problemáticos y normalizar saltos de línea
+    return response
+      .replace(/\r\n/g, '\n') // Normalizar saltos de línea de Windows
+      .replace(/\r/g, '\n')   // Normalizar saltos de línea de Mac clásico
+      .trim(); // Eliminar espacios en blanco al inicio y final
+  };
+
   const handleSendQuestion = async (question: string = currentQuestion) => {
     if (!question.trim()) {
       return;
@@ -115,8 +126,11 @@ const MedicalAnalyticsChat = ({
       });
 
       if (response.success) {
-        const aiResponse = response.data?.response || 'Análisis completado exitosamente.';
-        addMessage('bot', `🤖 **Análisis Médico IA**\n\n${aiResponse}`);
+        const rawResponse = response.data?.response || 'Análisis completado exitosamente.';
+        const cleanedResponse = cleanAIResponse(rawResponse);
+        
+        // Mostrar solo la respuesta limpia, sin prefijos adicionales
+        addMessage('bot', cleanedResponse);
       } else {
         const errorMsg = response.error || 'No se pudo procesar la consulta médica.';
         addMessage('bot', `❌ **Error en el Análisis**\n\n${errorMsg}\n\n💡 **Sugerencias:**\n• Verifica que el webhook N8N esté funcionando\n• Revisa la configuración de la URL\n• Intenta con una pregunta más específica`);
