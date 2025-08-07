@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Bot, User, Settings, Trash2, Send, Loader2, Database, AlertCircle } from "lucide-react";
 import { sendMedicalAnalyticsQuery } from "@/lib/medicalAnalytics";
+import MarkdownRenderer from "./MarkdownRenderer";
 
 interface MedicalAnalyticsChatProps {
   selectedPatientId: string | null;
@@ -331,7 +332,14 @@ const MedicalAnalyticsChat = ({
                           ? 'bg-medical-500 text-white rounded-br-sm'
                           : 'bg-slate-100 text-slate-900 rounded-bl-sm'
                       }`}>
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                        {message.type === 'bot' ? (
+                          <MarkdownRenderer 
+                            content={message.content} 
+                            className="text-sm"
+                          />
+                        ) : (
+                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         {formatTime(message.timestamp)}
