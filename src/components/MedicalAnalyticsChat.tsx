@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,15 +103,6 @@ const MedicalAnalyticsChat = ({
     setCurrentQuestion("");
     setIsLoading(true);
 
-    // Mostrar mensaje de feedback mientras procesa
-    const processingMessage: Message = {
-      id: `processing_${Date.now()}`,
-      type: 'bot',
-      content: `🔄 Analizando ${consultations.length} consultas médicas del paciente...\n\n• Procesando transcripciones y resúmenes\n• Analizando patrones históricos\n• Consultando con IA médica especializada\n\nEsto puede tomar hasta 45 segundos...`,
-      timestamp: new Date()
-    };
-    setMessages(prev => [...prev, processingMessage]);
-
     try {
       const response = await sendMedicalAnalyticsQuery({
         question,
@@ -124,9 +114,6 @@ const MedicalAnalyticsChat = ({
         webhookUrl
       });
 
-      // Remover mensaje de procesamiento
-      setMessages(prev => prev.filter(m => m.id !== processingMessage.id));
-
       if (response.success) {
         const aiResponse = response.data?.response || 'Análisis completado exitosamente.';
         addMessage('bot', `🤖 **Análisis Médico IA**\n\n${aiResponse}`);
@@ -135,9 +122,6 @@ const MedicalAnalyticsChat = ({
         addMessage('bot', `❌ **Error en el Análisis**\n\n${errorMsg}\n\n💡 **Sugerencias:**\n• Verifica que el webhook N8N esté funcionando\n• Revisa la configuración de la URL\n• Intenta con una pregunta más específica`);
       }
     } catch (error) {
-      // Remover mensaje de procesamiento
-      setMessages(prev => prev.filter(m => m.id !== processingMessage.id));
-      
       addMessage('bot', `🚫 **Error de Conexión**\n\nNo se pudo conectar con el sistema de análisis médico.\n\n**Posibles causas:**\n• Problema de conectividad de red\n• El webhook N8N no está disponible\n• Timeout del servidor\n\n💡 Intenta nuevamente en unos minutos.`);
     } finally {
       setIsLoading(false);
@@ -350,8 +334,12 @@ const MedicalAnalyticsChat = ({
                     <div className="flex-1">
                       <div className="inline-block p-3 bg-slate-100 rounded-lg rounded-bl-sm">
                         <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Procesando con IA médica especializada...
+                          <div className="flex space-x-1">
+                            <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                            <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                            <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
+                          </div>
+                          <span>Analizando con IA médica...</span>
                         </div>
                       </div>
                     </div>

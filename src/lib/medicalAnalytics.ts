@@ -89,8 +89,8 @@ export const sendMedicalAnalyticsQuery = async (payload: MedicalAnalyticsPayload
     const requestPayload = {
       question,
       patient: patientData,
-      consultations: consultationSummaries, // ← TODOS los resúmenes y transcripciones
-      context, // ← Estadísticas y patrones para análisis inteligente
+      consultations: consultationSummaries,
+      context,
       metadata: {
         timestamp: new Date().toISOString(),
         requestId: `medical_analytics_${Date.now()}`,
@@ -131,22 +131,33 @@ export const sendMedicalAnalyticsQuery = async (payload: MedicalAnalyticsPayload
     }
 
     const responseData = await response.json();
-    console.log('✅ Análisis médico completado:', responseData);
+    console.log('✅ Respuesta completa de N8N:', responseData);
 
-    // Validar estructura de respuesta esperada
-    if (responseData.success === false) {
-      throw new Error(responseData.error || 'El webhook N8N reportó un error');
+    // Manejar la estructura de respuesta de N8N: {"mensaje": "contenido"}
+    let aiResponse = '';
+    
+    if (responseData.mensaje) {
+      // Respuesta en el formato esperado de N8N
+      aiResponse = responseData.mensaje;
+    } else if (responseData.data?.response) {
+      // Formato alternativo por compatibilidad
+      aiResponse = responseData.data.response;
+    } else if (typeof responseData === 'string') {
+      // Respuesta directa como string
+      aiResponse = responseData;
+    } else {
+      throw new Error('Formato de respuesta no reconocido del webhook N8N');
     }
 
-    if (!responseData.data?.response) {
-      throw new Error('Respuesta inválida del webhook: falta el campo data.response');
+    if (!aiResponse || aiResponse.trim() === '') {
+      throw new Error('El webhook N8N devolvió una respuesta vacía');
     }
 
     return {
       success: true,
       data: {
-        response: responseData.data.response,
-        analysis: responseData.data.analysis || null
+        response: aiResponse,
+        analysis: responseData.analysis || null
       }
     };
 
