@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { groqApi } from "@/lib/api";
-import { BookOpen, Save, RotateCcw, Check } from "lucide-react";
+import { BookOpen, Save, RotateCcw, Check, RefreshCw } from "lucide-react";
+import ConsultationTransformer from "./ConsultationTransformer";
 
 // Define the Prompt interface to match the database schema
 interface Prompt {
@@ -280,85 +281,90 @@ Si se mencionan en la transcripción, incluye SIEMPRE estos datos en la sección
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BookOpen className="h-5 w-5 text-medical-600" />
-          Administrador de Prompts
-        </CardTitle>
-        <CardDescription>
-          Modifica los prompts que se utilizan para generar los resúmenes de las consultas
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs 
-          value={selectedPrompt?.id || ""} 
-          onValueChange={(value) => {
-            const prompt = prompts.find(p => p.id === value);
-            if (prompt) setSelectedPrompt(prompt);
-          }}
-        >
-          <TabsList className="mb-4">
+    <div className="space-y-6">
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-medical-600" />
+            Administrador de Prompts
+          </CardTitle>
+          <CardDescription>
+            Modifica los prompts que se utilizan para generar los resúmenes de las consultas
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs 
+            value={selectedPrompt?.id || ""} 
+            onValueChange={(value) => {
+              const prompt = prompts.find(p => p.id === value);
+              if (prompt) setSelectedPrompt(prompt);
+            }}
+          >
+            <TabsList className="mb-4">
+              {prompts.map(prompt => (
+                <TabsTrigger key={prompt.id} value={prompt.id} className="data-[state=active]:bg-medical-600 data-[state=active]:text-white">
+                  {prompt.name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            
             {prompts.map(prompt => (
-              <TabsTrigger key={prompt.id} value={prompt.id} className="data-[state=active]:bg-medical-600 data-[state=active]:text-white">
-                {prompt.name}
-              </TabsTrigger>
+              <TabsContent key={prompt.id} value={prompt.id} className="space-y-4">
+                <div>
+                  <Textarea 
+                    value={selectedPrompt?.id === prompt.id ? editedContent : prompt.content} 
+                    onChange={(e) => selectedPrompt?.id === prompt.id && setEditedContent(e.target.value)}
+                    rows={15}
+                    className="font-mono text-sm"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Button 
+                    variant="outline" 
+                    onClick={resetToDefault}
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Restablecer a valores predeterminados
+                  </Button>
+                  <Button 
+                    onClick={handleSavePrompt}
+                    disabled={isSaving || !selectedPrompt || selectedPrompt.content === editedContent}
+                  >
+                    {isSaving ? (
+                      <>
+                        <div className="animate-spin mr-2 h-4 w-4 border-t-2 border-white rounded-full"></div>
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Guardar cambios
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <div className="text-sm text-gray-500 mt-4">
+                  <p>Última actualización: {new Date(prompt.updated_at).toLocaleString()}</p>
+                </div>
+              </TabsContent>
             ))}
-          </TabsList>
-          
-          {prompts.map(prompt => (
-            <TabsContent key={prompt.id} value={prompt.id} className="space-y-4">
-              <div>
-                <Textarea 
-                  value={selectedPrompt?.id === prompt.id ? editedContent : prompt.content} 
-                  onChange={(e) => selectedPrompt?.id === prompt.id && setEditedContent(e.target.value)}
-                  rows={15}
-                  className="font-mono text-sm"
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <Button 
-                  variant="outline" 
-                  onClick={resetToDefault}
-                >
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Restablecer a valores predeterminados
-                </Button>
-                <Button 
-                  onClick={handleSavePrompt}
-                  disabled={isSaving || !selectedPrompt || selectedPrompt.content === editedContent}
-                >
-                  {isSaving ? (
-                    <>
-                      <div className="animate-spin mr-2 h-4 w-4 border-t-2 border-white rounded-full"></div>
-                      Guardando...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Guardar cambios
-                    </>
-                  )}
-                </Button>
-              </div>
-              <div className="text-sm text-gray-500 mt-4">
-                <p>Última actualización: {new Date(prompt.updated_at).toLocaleString()}</p>
-              </div>
-            </TabsContent>
-          ))}
-        </Tabs>
-      </CardContent>
-      <CardFooter className="border-t pt-4 flex justify-between">
-        <p className="text-sm text-gray-500">
-          Los cambios se aplicarán a las nuevas consultas que se generen.
-        </p>
-        {selectedPrompt?.active && (
-          <div className="flex items-center text-sm text-green-600">
-            <Check className="h-4 w-4 mr-1" /> Activo
-          </div>
-        )}
-      </CardFooter>
-    </Card>
+          </Tabs>
+        </CardContent>
+        <CardFooter className="border-t pt-4 flex justify-between">
+          <p className="text-sm text-gray-500">
+            Los cambios se aplicarán a las nuevas consultas que se generen.
+          </p>
+          {selectedPrompt?.active && (
+            <div className="flex items-center text-sm text-green-600">
+              <Check className="h-4 w-4 mr-1" /> Activo
+            </div>
+          )}
+        </CardFooter>
+      </Card>
+
+      {/* Componente para transformar consultas existentes */}
+      <ConsultationTransformer />
+    </div>
   );
 };
 
