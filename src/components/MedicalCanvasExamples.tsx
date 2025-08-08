@@ -63,15 +63,6 @@ const MedicalCanvasExamples = () => {
     }
   };
 
-  const exampleCode = `\`\`\`canvas
-{
-  "type": "chart",
-  "title": "Evolución de Glucosa",
-  "values": [95, 102, 98, 105, 92, 88, 94],
-  "labels": ["L", "M", "X", "J", "V", "S", "D"]
-}
-\`\`\``;
-
   return (
     <div className="space-y-6">
       <Card>
@@ -86,7 +77,14 @@ const MedicalCanvasExamples = () => {
             La IA médica ahora puede crear gráficos, diagramas y esquemas visuales usando la sintaxis:
           </p>
           <div className="bg-gray-50 p-3 rounded-lg border text-sm font-mono">
-            {exampleCode}
+            ```canvas<br/>
+            {JSON.stringify({
+              "type": "chart",
+              "title": "Evolución de Glucosa",
+              "values": [95, 102, 98, 105, 92, 88, 94],
+              "labels": ["L", "M", "X", "J", "V", "S", "D"]
+            }, null, 2)}<br/>
+            ```
           </div>
         </CardContent>
       </Card>
@@ -158,8 +156,8 @@ const MedicalCanvasExamples = () => {
                 <CardTitle className="text-base">Ejemplo Completo</CardTitle>
               </CardHeader>
               <CardContent>
-                <pre className="text-xs bg-gray-50 p-3 rounded-lg overflow-x-auto">
-{````canvas
+                <div className="text-xs bg-gray-50 p-3 rounded-lg overflow-x-auto whitespace-pre-wrap">
+                  {`\`\`\`canvas
 {
   "type": "anatomy",
   "parts": [
@@ -181,7 +179,7 @@ const MedicalCanvasExamples = () => {
   ]
 }
 \`\`\``}
-                </pre>
+                </div>
               </CardContent>
             </Card>
           </div>
