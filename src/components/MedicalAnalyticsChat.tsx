@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Bot, User, Settings, Trash2, Send, Loader2, Database, AlertCircle } from "lucide-react";
+import { Bot, User, Settings, Trash2, Send, Loader2, Database, AlertCircle, BarChart3 } from "lucide-react";
 import { sendMedicalAnalyticsQuery } from "@/lib/medicalAnalytics";
 import MarkdownRenderer from "./MarkdownRenderer";
 
@@ -32,7 +32,11 @@ const suggestedQuestions = [
   "¿Cuál es el síntoma más frecuente y su evolución temporal?",
   "¿Hay tendencias preocupantes en los diagnósticos recientes?",
   "¿Qué recomendaciones darías basado en el historial médico?",
-  "¿Cuándo fue la última vez que presentó este síntoma específico?"
+  "¿Cuándo fue la última vez que presentó este síntoma específico?",
+  "Crea un gráfico de la evolución de los síntomas principales",
+  "Muestra un diagrama del proceso diagnóstico recomendado",
+  "Diseña un esquema anatómico de las áreas afectadas",
+  "Genera una línea de tiempo de las consultas médicas"
 ];
 
 const MedicalAnalyticsChat = ({ 
@@ -176,9 +180,15 @@ const MedicalAnalyticsChat = ({
           <p className="text-sm text-muted-foreground mb-4">
             Selecciona un paciente para analizar su historial médico completo con inteligencia artificial.
           </p>
-          <div className="text-xs text-muted-foreground bg-blue-50 p-3 rounded border">
-            <Database className="h-4 w-4 inline mr-1" />
-            El sistema analizará automáticamente transcripciones, resúmenes y patrones históricos.
+          <div className="text-xs text-muted-foreground bg-blue-50 p-3 rounded border space-y-2">
+            <div className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              <span>Análisis automático de transcripciones y resúmenes médicos</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              <span>Capacidad de generar gráficos, diagramas y esquemas médicos</span>
+            </div>
           </div>
         </div>
       </div>
@@ -193,7 +203,7 @@ const MedicalAnalyticsChat = ({
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
               <Bot className="h-5 w-5 text-medical-600" />
-              Análisis IA - Asistente Médico
+              Análisis IA - Asistente Médico Visual
               {patientStats && (
                 <span className="text-sm font-normal text-muted-foreground">
                   ({patientStats.totalConsultations} consultas disponibles)
@@ -211,10 +221,14 @@ const MedicalAnalyticsChat = ({
           </div>
           
           {patientStats && (
-            <div className="text-xs text-muted-foreground bg-green-50 p-3 rounded border flex items-center gap-4">
+            <div className="text-xs text-muted-foreground bg-green-50 p-3 rounded border flex items-center gap-4 flex-wrap">
               <div>📊 {patientStats.consultationsWithSummary} resúmenes médicos</div>
               <div>📝 {patientStats.consultationsWithTranscription} transcripciones</div>
               <div>📅 Desde {patientStats.dateRange?.from ? new Date(patientStats.dateRange.from).toLocaleDateString('es-ES') : 'N/A'}</div>
+              <div className="flex items-center gap-1">
+                <BarChart3 className="h-3 w-3" />
+                <span>Gráficos y diagramas disponibles</span>
+              </div>
             </div>
           )}
         </CardHeader>
@@ -239,7 +253,7 @@ const MedicalAnalyticsChat = ({
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Este webhook procesa los datos médicos con IA especializada para análisis inteligente.
+                Este webhook procesa los datos médicos con IA especializada para análisis inteligente y generación de contenido visual.
               </p>
             </div>
           </CardContent>
@@ -254,6 +268,9 @@ const MedicalAnalyticsChat = ({
             {patientStats && patientStats.totalConsultations === 0 && (
               <AlertCircle className="h-4 w-4 text-orange-500" />
             )}
+            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+              Incluye gráficos y diagramas
+            </span>
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {suggestedQuestions.map((question, index) => (
@@ -261,13 +278,23 @@ const MedicalAnalyticsChat = ({
                 key={index}
                 variant="outline"
                 size="sm"
-                className="text-left h-auto p-3 text-xs text-medical-600 border-medical-300 hover:bg-medical-50 whitespace-normal"
+                className={`text-left h-auto p-3 text-xs border-medical-300 hover:bg-medical-50 whitespace-normal ${
+                  index >= 8 ? 'text-blue-600 border-blue-300 hover:bg-blue-50' : 'text-medical-600'
+                }`}
                 onClick={() => handleSendQuestion(question)}
                 disabled={isLoading || !patientStats || patientStats.totalConsultations === 0}
               >
+                {index >= 8 && <BarChart3 className="h-3 w-3 mr-1 inline" />}
                 {question}
               </Button>
             ))}
+          </div>
+          
+          <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200">
+            <p className="text-xs text-blue-700">
+              <strong>💡 Nueva funcionalidad:</strong> La IA ahora puede crear gráficos, diagramas anatómicos, 
+              líneas de tiempo y esquemas médicos usando la sintaxis <code>```canvas</code>
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -380,7 +407,7 @@ const MedicalAnalyticsChat = ({
             <Input
               value={currentQuestion}
               onChange={(e) => setCurrentQuestion(e.target.value)}
-              placeholder="Pregunta sobre el historial médico del paciente..."
+              placeholder="Pregunta sobre el historial médico del paciente (ahora con gráficos)..."
               onKeyPress={(e) => {
                 if (e.key === 'Enter' && !isLoading) {
                   handleSendQuestion();
@@ -402,6 +429,10 @@ const MedicalAnalyticsChat = ({
               ⚠️ Este paciente necesita consultas médicas registradas para poder analizar.
             </p>
           )}
+          <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+            <BarChart3 className="h-3 w-3" />
+            La IA puede generar gráficos médicos, diagramas anatómicos y líneas de tiempo automáticamente
+          </p>
         </CardContent>
       </Card>
     </div>
