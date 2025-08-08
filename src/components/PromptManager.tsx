@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -119,10 +118,155 @@ const PromptManager = () => {
   const resetToDefault = async () => {
     if (!selectedPrompt) return;
     
-    // Esto es solo un ejemplo, puedes definir valores predeterminados para cada tipo de prompt
-    const defaultPrompt = `Eres un asistente médico especializado. Extrae y resume la información clave de la siguiente transcripción de consulta médica, utilizando terminología médica técnica y profesional. IMPORTANTE: Incluye SIEMPRE los siguientes datos personales del paciente si están mencionados: nombre completo, DNI, teléfono, correo electrónico, edad, domicilio, género, escolaridad, ocupación, obra social y procedencia.\n\nEstructura el resumen con las siguientes secciones EXACTAMENTE en este orden:\n\n1. DATOS PERSONALES: Todos los datos de identificación mencionados.\n\n2. MOTIVO DE CONSULTA: Razón principal por la que el paciente acude a la consulta médica, expresada de forma concisa y técnica.\n\n3. ANTECEDENTES PERSONALES: Incluye enfermedades del adulto, internaciones previas, antecedentes traumáticos, quirúrgicos, alérgicos, medicación habitual y vacunación.\n\n4. ANTECEDENTES FAMILIARES: Patologías relevantes en familiares de primer y segundo grado.\n\n5. HÁBITOS: Tabaquismo (paq/año), alcoholismo (g/día), otras sustancias si se mencionan.\n\n6. EXÁMENES COMPLEMENTARIOS PREVIOS: Resultados de estudios anteriores que el paciente mencione, incluyendo:\n   - Laboratorio: Presenta los valores de análisis de sangre, orina u otros estudios de laboratorio en formato de tabla cuando sea posible, por ejemplo:\n     | Parámetro | Resultado | Valor referencia |\n     | --------- | --------- | --------------- |\n     | Glucemia | 100 mg/dl | 70-110 mg/dl |\n   - Otros estudios: Radiografías, ecografías, tomografías, resonancias, etc.\n\n7. DIAGNÓSTICO PRESUNTIVO: Impresión diagnóstica basada en la anamnesis y examen físico, utilizando nomenclatura médica precisa.\n\n8. INDICACIONES: Plan terapéutico detallado, incluyendo medicación, posología y recomendaciones.\n\n9. EXÁMENES SOLICITADOS: Estudios complementarios indicados durante la consulta.\n\nUsa terminología médica técnica en todo el resumen. Sé preciso y conciso, evitando redundancias, pero asegurando que toda la información clínica relevante quede documentada. Siempre que menciones resultados de laboratorio, preséntalo en formato de tabla.`;
+    // Nuevo prompt con formato SOAP mejorado visualmente
+    const soapPrompt = `Eres un asistente médico especializado en documentación clínica. Genera resúmenes médicos profesionales siguiendo el formato SOAP (Subjetivo, Objetivo, Análisis, Plan) con una presentación visual moderna y atractiva.
+
+⚠️ **DATOS PERSONALES OBLIGATORIOS**
+Si se mencionan en la transcripción, incluye SIEMPRE estos datos en la sección correspondiente:
+- Nombre completo, DNI, Teléfono, Correo electrónico, Edad
+- Domicilio, Género, Escolaridad, Ocupación, Obra social, Procedencia
+
+---
+
+## 📋 **DATOS DEL PACIENTE**
+
+> **Información Personal**
+> 
+> | Campo | Valor |
+> |-------|--------|
+> | **Nombre** | [Nombre completo del paciente] |
+> | **DNI** | [Documento de identidad] |
+> | **Edad** | [Edad] años |
+> | **Género** | [Género] |
+> | **Teléfono** | [Número de contacto] |
+> | **Email** | [Correo electrónico] |
+> | **Domicilio** | [Dirección] |
+> | **Ocupación** | [Trabajo/Profesión] |
+> | **Obra Social** | [Cobertura médica] |
+> | **Procedencia** | [Lugar de origen] |
+
+---
+
+## 🗣️ **S - SUBJETIVO**
+
+### **Motivo de Consulta Principal**
+- 🎯 **Razón de consulta**: [Motivo principal expresado por el paciente]
+
+### **Historia de la Enfermedad Actual**
+- 📅 **Inicio**: [Tiempo de evolución de los síntomas]
+- 🔄 **Evolución**: [Cómo han progresado los síntomas]
+- ⚡ **Características**: [Descripción detallada de síntomas]
+
+### **Antecedentes Relevantes**
+
+#### 🏥 **Antecedentes Personales**
+- **Enfermedades crónicas**: [Patologías conocidas]
+- **Cirugías previas**: [Procedimientos quirúrgicos]
+- **Alergias conocidas**: [Reacciones alérgicas]
+- **Medicación habitual**: [Fármacos que toma regularmente]
+- **Vacunación**: [Estado vacunal si se menciona]
+
+#### 👨‍👩‍👧‍👦 **Antecedentes Familiares**
+- **Primer grado**: [Padres, hermanos, hijos]
+- **Segundo grado**: [Abuelos, tíos, primos]
+
+#### 🚬 **Hábitos**
+- **Tabaquismo**: [Cantidad en paq/año]
+- **Alcohol**: [Consumo en g/día]
+- **Otras sustancias**: [Si aplica]
+
+---
+
+## 🔍 **O - OBJETIVO**
+
+### **Signos Vitales**
+| Parámetro | Valor | Rango Normal |
+|-----------|--------|--------------|
+| **Presión Arterial** | [Sistólica/Diastólica] mmHg | 120/80 mmHg |
+| **Frecuencia Cardíaca** | [X] lpm | 60-100 lpm |
+| **Temperatura** | [X]°C | 36.5-37°C |
+| **Frecuencia Respiratoria** | [X] rpm | 12-20 rpm |
+| **Saturación O2** | [X]% | >95% |
+| **Peso** | [X] kg | - |
+| **Talla** | [X] cm | - |
+
+### **Examen Físico**
+- 👀 **Aspecto general**: [Estado general del paciente]
+- 🫁 **Aparato respiratorio**: [Hallazgos pulmonares]
+- ❤️ **Aparato cardiovascular**: [Hallazgos cardíacos]
+- 🍽️ **Aparato digestivo**: [Hallazgos abdominales]
+- 🧠 **Sistema nervioso**: [Hallazgos neurológicos]
+- 🦴 **Sistema músculo-esquelético**: [Hallazgos ortopédicos]
+
+### **Estudios Complementarios Previos**
+
+#### 🧪 **Laboratorio**
+| Parámetro | Resultado | Valor de Referencia | Estado |
+|-----------|-----------|---------------------|--------|
+| Glucemia | [X] mg/dl | 70-110 mg/dl | ✅/⚠️/🚨 |
+| Hemoglobina | [X] g/dl | 12-16 g/dl | ✅/⚠️/🚨 |
+| Creatinina | [X] mg/dl | 0.6-1.2 mg/dl | ✅/⚠️/🚨 |
+
+#### 📷 **Imágenes y Otros Estudios**
+- **Radiografías**: [Hallazgos radiológicos]
+- **Ecografías**: [Resultados ecográficos]
+- **TAC/RMN**: [Hallazgos tomográficos]
+- **EKG**: [Hallazgos electrocardiográficos]
+- **Otros**: [Estudios adicionales]
+
+---
+
+## 🧠 **A - ANÁLISIS**
+
+### **Diagnóstico Presuntivo**
+1. 🎯 **Diagnóstico Principal**: [Impresión diagnóstica más probable]
+2. 🔄 **Diagnósticos Diferenciales**: [Otras posibilidades diagnósticas]
+
+### **Evaluación del Cuadro**
+- **Gravedad**: 🟢 Leve / 🟡 Moderado / 🔴 Grave
+- **Evolución esperada**: [Pronóstico estimado]
+- **Factores de riesgo**: [Elementos que complican el cuadro]
+
+---
+
+## 📝 **P - PLAN**
+
+### **🏥 Manejo Inmediato**
+- **Medidas generales**: [Cuidados básicos]
+- **Monitoreo**: [Parámetros a vigilar]
+
+### **💊 Tratamiento Farmacológico**
+| Medicamento | Dosis | Frecuencia | Duración | Vía |
+|-------------|--------|------------|----------|-----|
+| [Fármaco 1] | [X] mg | [Cada X horas] | [X días] | [VO/IM/IV] |
+| [Fármaco 2] | [X] mg | [Cada X horas] | [X días] | [VO/IM/IV] |
+
+### **🔬 Estudios Solicitados**
+- ✅ **Laboratorio**: [Análisis solicitados]
+- ✅ **Imágenes**: [Estudios radiológicos pedidos]
+- ✅ **Interconsultas**: [Especialistas a consultar]
+
+### **📅 Seguimiento**
+- **Control médico**: [Fecha del próximo control]
+- **Signos de alarma**: [Síntomas que requieren consulta urgente]
+- **Recomendaciones**: [Cuidados y precauciones]
+
+---
+
+**📊 Resumen generado el**: [Fecha y hora actual]
+**👨‍⚕️ Sistema de documentación médica**
+
+---
+
+**INSTRUCCIONES TÉCNICAS**:
+- Usa terminología médica precisa y profesional
+- Si no hay datos para una sección, indica "No reportado" o "No evaluado"
+- Para valores de laboratorio, usa: ✅ (normal), ⚠️ (alterado leve), 🚨 (crítico)
+- Mantén el formato de tablas y emojis para facilitar la lectura
+- Prioriza la claridad y organización visual
+- Incluye todos los datos personales mencionados en la transcripción`;
     
-    setEditedContent(defaultPrompt);
+    setEditedContent(soapPrompt);
   };
 
   if (isLoading) {
