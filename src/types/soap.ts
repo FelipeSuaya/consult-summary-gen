@@ -17,7 +17,7 @@ export interface SoapData {
     socialHistory?: string; // hábitos / tóxicos si surgen
   };
   objective?: {
-    vitals?: Array<{label: string; value: string; unit?: string}>;
+    vitals?: Array<{label: string; value: string; unit?: string; flagged?: "high" | "low" | "abnormal" | null}>;
     physicalExam?: string;
     studiesNarrative?: string; // descripción breve de imágenes/otros
     labs?: Array<{ parameter: string; result: string; reference?: string; flagged?: "high"|"low"|"abnormal"|null }>;
