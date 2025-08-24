@@ -108,15 +108,9 @@ export const convertN8nToSoapData = (n8nData: N8nResponse | N8nResponse[], meta?
   };
 };
 
-// Generate formatted summary from SOAP data
+// Generate formatted summary from SOAP data (without transcription)
 export const generateFormattedSummary = (soapData: SoapData): string => {
   const sections = [];
-  
-  if (soapData.transcripcion) {
-    sections.push("TRANSCRIPCIÓN:");
-    sections.push(soapData.transcripcion);
-    sections.push("");
-  }
   
   if (soapData.subjective?.chiefComplaint) {
     sections.push("SUBJETIVO:");
