@@ -5,6 +5,7 @@ import AlertsPanel from "./AlertsPanel";
 import HistoryPanel from "./HistoryPanel";
 import LabCard from "./LabCard";
 import PrintHeader from "./PrintHeader";
+import MedicalSoapCards from "./MedicalSoapCards";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -487,47 +488,9 @@ const SoapSummary = ({ soapData, alerts = [], historyEntries = [], className = "
         </div>
       )}
 
-      {/* Main Content Area */}
+      {/* Main SOAP Content - New Card Design */}
       <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6 xl:pr-80">
-          {/* S · Subjetivo */}
-          <div className="md:col-span-1">
-            {renderSubjective()}
-          </div>
-
-          {/* O · Objetivo */}
-          <div className="md:col-span-1">
-            {renderObjective()}
-          </div>
-
-          {/* A · Evaluación */}
-          <div className="md:col-span-1">
-            {renderAssessment()}
-          </div>
-
-          {/* P · Plan */}
-          <div className="md:col-span-1">
-            {renderPlan()}
-          </div>
-
-          {/* Laboratorio (if exists) */}
-          {soapData.objective?.labs && soapData.objective.labs.length > 0 && (
-            <div className="md:col-span-2">
-              <LabCard 
-                labs={soapData.objective.labs}
-                title="Laboratorio"
-                subtitle="Resultados de análisis clínicos"
-              />
-            </div>
-          )}
-
-          {/* AI Diagnosis */}
-          {(soapData.diagnosticoPresuntivo || soapData.aiPresumptiveDx) && (
-            <div className="md:col-span-2">
-              {renderAiDiagnosis()}
-            </div>
-          )}
-        </div>
+        <MedicalSoapCards soapData={soapData} />
       </div>
 
       {/* History Panel */}

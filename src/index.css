@@ -47,6 +47,31 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Medical SOAP Colors */
+    --medical-subjective: 59 100% 60%;
+    --medical-subjective-foreground: 0 0% 100%;
+    --medical-subjective-muted: 59 100% 97%;
+    
+    --medical-objective: 158 64% 52%;
+    --medical-objective-foreground: 0 0% 100%;
+    --medical-objective-muted: 158 64% 97%;
+    
+    --medical-assessment: 43 96% 56%;
+    --medical-assessment-foreground: 0 0% 100%;
+    --medical-assessment-muted: 43 96% 97%;
+    
+    --medical-plan: 173 58% 39%;
+    --medical-plan-foreground: 0 0% 100%;
+    --medical-plan-muted: 173 58% 97%;
+    
+    --medical-lab: 215 20% 65%;
+    --medical-lab-foreground: 0 0% 100%;
+    --medical-lab-muted: 215 20% 97%;
+    
+    --medical-alert: 0 84% 60%;
+    --medical-alert-foreground: 0 0% 100%;
+    --medical-alert-muted: 0 84% 97%;
   }
 
   .dark {
@@ -89,6 +114,31 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Medical SOAP Colors - Dark Mode */
+    --medical-subjective: 59 100% 50%;
+    --medical-subjective-foreground: 0 0% 100%;
+    --medical-subjective-muted: 59 100% 8%;
+    
+    --medical-objective: 158 64% 42%;
+    --medical-objective-foreground: 0 0% 100%;
+    --medical-objective-muted: 158 64% 8%;
+    
+    --medical-assessment: 43 96% 46%;
+    --medical-assessment-foreground: 0 0% 100%;
+    --medical-assessment-muted: 43 96% 8%;
+    
+    --medical-plan: 173 58% 29%;
+    --medical-plan-foreground: 0 0% 100%;
+    --medical-plan-muted: 173 58% 8%;
+    
+    --medical-lab: 215 20% 55%;
+    --medical-lab-foreground: 0 0% 100%;
+    --medical-lab-muted: 215 20% 8%;
+    
+    --medical-alert: 0 84% 50%;
+    --medical-alert-foreground: 0 0% 100%;
+    --medical-alert-muted: 0 84% 8%;
   }
 }
 
