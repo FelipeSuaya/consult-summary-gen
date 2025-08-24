@@ -691,10 +691,31 @@ const AudioRecorder = ({ onRecordingComplete, preselectedPatient }: AudioRecorde
         throw new Error(webhookResponse.error || "Error en el procesamiento del audio");
       }
       
-      const { transcripcion, resumen } = webhookResponse.data;
-      console.log("Webhook response processed:", { transcripcion, resumen });
+      // Process SOAP data from webhook response
+      console.log("Processing webhook response:", webhookResponse.data);
       
-      finalizeConsultation(transcripcion, resumen);
+      // Import SOAP utilities
+      const { convertN8nToSoapData, generateFormattedSummary } = await import("@/types/soap");
+      
+      try {
+        const soapData = convertN8nToSoapData(webhookResponse.data);
+        const formattedSummary = generateFormattedSummary(soapData);
+        const transcripcion = soapData.transcripcion || webhookResponse.data.transcripcion || "";
+        
+        console.log("SOAP data processed:", { soapData, formattedSummary });
+        
+        finalizeConsultation(transcripcion, formattedSummary);
+      } catch (soapError) {
+        console.error("Error processing SOAP data:", soapError);
+        
+        // Fallback to direct format if SOAP conversion fails
+        const { transcripcion, resumen } = webhookResponse.data;
+        if (transcripcion || resumen) {
+          finalizeConsultation(transcripcion || "", resumen || "Error al procesar el formato SOAP");
+        } else {
+          throw new Error("No se pudieron extraer los datos del webhook");
+        }
+      }
     } catch (error) {
       console.error("Error de procesamiento:", error);
       handleProcessingError(error);

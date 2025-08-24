@@ -1,7 +1,15 @@
 
-// n8n response format - actual structure from n8n
+// n8n response format - actual structure from n8n (supports both formats)
 export interface N8nResponse {
-  output: {
+  transcripcion?: string;
+  Subjective?: string;
+  Objective?: string;
+  Assessment?: string;
+  Plan?: string;
+  "Diagnostico Presuntivo"?: string;
+  DiagnosticoPresuntivo?: string;
+  Laboratorio?: string;
+  output?: {
     Subjective: string;
     Objective: string;
     Assessment: string;
@@ -60,27 +68,91 @@ export interface SoapData {
 // Converter function from n8n format to internal format
 export const convertN8nToSoapData = (n8nData: N8nResponse | N8nResponse[], meta?: SoapData['meta']): SoapData => {
   // Handle array response (first item) or direct response
-  const data = Array.isArray(n8nData) ? n8nData[0]?.output : n8nData.output;
+  let data: any;
   
-  if (!data) {
+  if (Array.isArray(n8nData)) {
+    data = n8nData[0];
+  } else {
+    data = n8nData;
+  }
+  
+  // Handle nested output format or direct format
+  const soapFields = data.output || data;
+  
+  if (!soapFields) {
     throw new Error('Invalid n8n response format');
   }
 
+  // Handle both "Diagnostico Presuntivo" and "DiagnosticoPresuntivo" formats
+  const diagnostico = soapFields["Diagnostico Presuntivo"] || 
+                     soapFields["DiagnosticoPresuntivo"] || 
+                     '';
+
   return {
     meta,
+    transcripcion: data.transcripcion || '',
     subjective: {
-      chiefComplaint: data.Subjective || '',
+      chiefComplaint: soapFields.Subjective || '',
     },
     objective: {
-      physicalExam: data.Objective || '',
+      physicalExam: soapFields.Objective || '',
     },
     assessment: {
-      impression: data.Assessment || '',
+      impression: soapFields.Assessment || '',
     },
     plan: {
-      treatment: data.Plan || '',
+      treatment: soapFields.Plan || '',
     },
-    diagnosticoPresuntivo: data["Diagnostico Presuntivo"] || '',
-    laboratorio: data.Laboratorio || '',
+    diagnosticoPresuntivo: diagnostico,
+    laboratorio: soapFields.Laboratorio || '',
   };
+};
+
+// Generate formatted summary from SOAP data
+export const generateFormattedSummary = (soapData: SoapData): string => {
+  const sections = [];
+  
+  if (soapData.transcripcion) {
+    sections.push("TRANSCRIPCIÓN:");
+    sections.push(soapData.transcripcion);
+    sections.push("");
+  }
+  
+  if (soapData.subjective?.chiefComplaint) {
+    sections.push("SUBJETIVO:");
+    sections.push(soapData.subjective.chiefComplaint);
+    sections.push("");
+  }
+  
+  if (soapData.objective?.physicalExam) {
+    sections.push("OBJETIVO:");
+    sections.push(soapData.objective.physicalExam);
+    sections.push("");
+  }
+  
+  if (soapData.assessment?.impression) {
+    sections.push("EVALUACIÓN:");
+    sections.push(soapData.assessment.impression);
+    sections.push("");
+  }
+  
+  if (soapData.plan?.treatment) {
+    sections.push("PLAN:");
+    sections.push(soapData.plan.treatment);
+    sections.push("");
+  }
+  
+  if (soapData.diagnosticoPresuntivo) {
+    sections.push("DIAGNÓSTICO PRESUNTIVO:");
+    sections.push(soapData.diagnosticoPresuntivo);
+    sections.push("");
+  }
+  
+  if (soapData.laboratorio) {
+    sections.push("LABORATORIO:");
+    sections.push(soapData.laboratorio);
+    sections.push("");
+  }
+  
+  return sections.join('\n');
 };
