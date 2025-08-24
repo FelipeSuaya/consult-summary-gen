@@ -24,6 +24,8 @@ export default {
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
+				'background-gradient-start': 'hsl(var(--background-gradient-start))',
+				'background-gradient-end': 'hsl(var(--background-gradient-end))',
 				foreground: 'hsl(var(--foreground))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
@@ -51,7 +53,9 @@ export default {
 				},
 				card: {
 					DEFAULT: 'hsl(var(--card))',
-					foreground: 'hsl(var(--card-foreground))'
+					foreground: 'hsl(var(--card-foreground))',
+					glass: 'hsl(var(--card-glass))',
+					'glass-border': 'hsl(var(--card-glass-border))'
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
@@ -107,7 +111,8 @@ export default {
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
-				'pulse-recording': 'pulse-recording 2s ease-in-out infinite'
+				'pulse-recording': 'pulse-recording 2s ease-in-out infinite',
+				'pulse-once': 'pulse 0.5s ease-in-out 1'
 			}
 		}
 	},

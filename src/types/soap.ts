@@ -20,7 +20,7 @@ export interface SoapData {
     vitals?: Array<{label: string; value: string; unit?: string; flagged?: "high" | "low" | "abnormal" | null}>;
     physicalExam?: string;
     studiesNarrative?: string; // descripción breve de imágenes/otros
-    labs?: Array<{ parameter: string; result: string; reference?: string; flagged?: "high"|"low"|"abnormal"|null }>;
+    labs?: Array<{ parameter: string; result: string; reference?: string; unit?: string; flagged?: "high"|"low"|"abnormal"|null }>;
   };
   assessment?: {
     impression?: string; // impresión diagnóstica del médico
