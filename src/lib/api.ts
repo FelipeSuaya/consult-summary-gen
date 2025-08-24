@@ -311,6 +311,11 @@ EXÁMENES SOLICITADOS: Estudios complementarios solicitados durante la consulta.
       email?: string;
     } = {};
     
+    // Check if summary exists and is a string
+    if (!summary || typeof summary !== 'string') {
+      return data;
+    }
+    
     // Extract DNI (assuming formats like "DNI: 12345678" or similar)
     const dniMatch = summary.match(/DNI:?\s*(\d{7,9}[A-Za-z]?)/i);
     if (dniMatch) data.dni = dniMatch[1];

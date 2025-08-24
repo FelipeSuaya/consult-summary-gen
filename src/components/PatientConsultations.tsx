@@ -146,7 +146,7 @@ const processTextWithTables = (text: string) => {
   const sectionsWithTables = text.split(sectionPattern);
   
   if (sectionsWithTables.length <= 1) {
-    const tablesMatch = text.match(tablePattern);
+    const tablesMatch = text?.match(tablePattern);
     if (tablesMatch) {
       let processedText = text;
       tablesMatch.forEach(tableText => {
@@ -190,7 +190,7 @@ const processTextWithTables = (text: string) => {
           icon = <FileText className="h-4 w-4" />;
       }
       
-      const tablesInSection = sectionContent.match(tablePattern);
+      const tablesInSection = sectionContent?.match(tablePattern);
       
       if (tablesInSection) {
         let processedContent = sectionContent;

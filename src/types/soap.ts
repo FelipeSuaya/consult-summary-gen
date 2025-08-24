@@ -1,13 +1,14 @@
 
-// n8n response format
+// n8n response format - actual structure from n8n
 export interface N8nResponse {
-  transcripcion: string;
-  Subjective: string;
-  Objective: string;
-  Assessment: string;
-  Plan: string;
-  "Diagnostico Presuntivo": string;
-  Laboratorio: string;
+  output: {
+    Subjective: string;
+    Objective: string;
+    Assessment: string;
+    Plan: string;
+    "Diagnostico Presuntivo": string;
+    Laboratorio: string;
+  };
 }
 
 // Internal SoapData interface (detailed structure for UI)
@@ -57,23 +58,29 @@ export interface SoapData {
 }
 
 // Converter function from n8n format to internal format
-export const convertN8nToSoapData = (n8nData: N8nResponse, meta?: SoapData['meta']): SoapData => {
+export const convertN8nToSoapData = (n8nData: N8nResponse | N8nResponse[], meta?: SoapData['meta']): SoapData => {
+  // Handle array response (first item) or direct response
+  const data = Array.isArray(n8nData) ? n8nData[0]?.output : n8nData.output;
+  
+  if (!data) {
+    throw new Error('Invalid n8n response format');
+  }
+
   return {
     meta,
-    transcripcion: n8nData.transcripcion,
     subjective: {
-      chiefComplaint: n8nData.Subjective,
+      chiefComplaint: data.Subjective || '',
     },
     objective: {
-      physicalExam: n8nData.Objective,
+      physicalExam: data.Objective || '',
     },
     assessment: {
-      impression: n8nData.Assessment,
+      impression: data.Assessment || '',
     },
     plan: {
-      treatment: n8nData.Plan,
+      treatment: data.Plan || '',
     },
-    diagnosticoPresuntivo: n8nData["Diagnostico Presuntivo"],
-    laboratorio: n8nData.Laboratorio,
+    diagnosticoPresuntivo: data["Diagnostico Presuntivo"] || '',
+    laboratorio: data.Laboratorio || '',
   };
 };
