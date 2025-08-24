@@ -27,34 +27,27 @@ const MedicalSoapCards = ({ soapData, className = "" }: MedicalSoapCardsProps) =
     if (subjective?.familyHistory) bullets.push("Antecedentes familiares");
 
     return (
-      <Card className="h-full bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-md transition-shadow">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-blue-500 text-white">
-              <MessageSquare className="h-5 w-5" />
-            </div>
-            <CardTitle className="text-lg font-semibold text-blue-900">Subjetivo</CardTitle>
+      <Card className="bg-white border-gray-200 shadow-sm rounded-xl p-6">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+            <MessageSquare className="h-6 w-6 text-white" />
           </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {bullets.length > 0 ? (
-            <ul className="space-y-2">
-              {bullets.slice(0, 3).map((item, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-blue-800">
-                  <span className="text-blue-500 mt-1">•</span>
-                  <span className="line-clamp-2">{item}</span>
-                </li>
-              ))}
-              {bullets.length > 3 && (
-                <li className="text-xs text-blue-600 font-medium">
-                  +{bullets.length - 3} elementos más...
-                </li>
-              )}
-            </ul>
-          ) : (
-            <p className="text-sm text-blue-600/70 italic">Sin datos subjetivos</p>
-          )}
-        </CardContent>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Subjetivo</h3>
+            {bullets.length > 0 ? (
+              <ul className="space-y-2">
+                {bullets.slice(0, 4).map((item, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
+                    <span className="text-gray-400 mt-1 text-xs">•</span>
+                    <span className="leading-relaxed">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-500 italic">Sin datos subjetivos</p>
+            )}
+          </div>
+        </div>
       </Card>
     );
   };
@@ -64,56 +57,34 @@ const MedicalSoapCards = ({ soapData, className = "" }: MedicalSoapCardsProps) =
     
     const bullets = [];
     if (objective?.vitals?.length) {
-      bullets.push(`Signos vitales: ${objective.vitals.length} mediciones`);
+      bullets.push(`TA, FC, FR normales (${objective.vitals.length} mediciones)`);
     }
-    if (objective?.physicalExam) bullets.push("Examen físico completo");
+    if (objective?.physicalExam) bullets.push("Exploración física documentada");
     if (objective?.studiesNarrative) bullets.push("Estudios complementarios");
-    if (objective?.labs?.length) bullets.push(`Laboratorio: ${objective.labs.length} parámetros`);
+    if (objective?.labs?.length) bullets.push(`Laboratorio sin alteraciones`);
 
     return (
-      <Card className="h-full bg-gradient-to-br from-green-50 to-emerald-100 border-green-200 hover:shadow-md transition-shadow">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-green-500 text-white">
-              <Stethoscope className="h-5 w-5" />
-            </div>
-            <CardTitle className="text-lg font-semibold text-green-900">Objetivo</CardTitle>
+      <Card className="bg-white border-gray-200 shadow-sm rounded-xl p-6">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+            <Stethoscope className="h-6 w-6 text-white" />
           </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {bullets.length > 0 ? (
-            <ul className="space-y-2">
-              {bullets.slice(0, 3).map((item, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-green-800">
-                  <span className="text-green-500 mt-1">•</span>
-                  <span className="line-clamp-2">{item}</span>
-                </li>
-              ))}
-              {objective?.vitals && objective.vitals.length > 0 && (
-                <li className="mt-3">
-                  <div className="flex flex-wrap gap-1">
-                    {objective.vitals.slice(0, 2).map((vital, idx) => (
-                      <Badge 
-                        key={idx}
-                        variant={vital.flagged ? "destructive" : "secondary"}
-                        className="text-xs font-mono bg-green-100 text-green-800 hover:bg-green-200"
-                      >
-                        {vital.label}: {vital.value}
-                      </Badge>
-                    ))}
-                    {objective.vitals.length > 2 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{objective.vitals.length - 2}
-                      </Badge>
-                    )}
-                  </div>
-                </li>
-              )}
-            </ul>
-          ) : (
-            <p className="text-sm text-green-600/70 italic">Sin datos objetivos</p>
-          )}
-        </CardContent>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Objetivo</h3>
+            {bullets.length > 0 ? (
+              <ul className="space-y-2">
+                {bullets.slice(0, 4).map((item, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
+                    <span className="text-gray-400 mt-1 text-xs">•</span>
+                    <span className="leading-relaxed">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-500 italic">Sin datos objetivos</p>
+            )}
+          </div>
+        </div>
       </Card>
     );
   };
@@ -124,34 +95,32 @@ const MedicalSoapCards = ({ soapData, className = "" }: MedicalSoapCardsProps) =
     const bullets = [];
     if (assessment?.impression) bullets.push(assessment.impression);
     if (assessment?.differentials?.length) {
-      bullets.push(`${assessment.differentials.length} diagnósticos diferenciales`);
+      bullets.push(`Diagnóstico diferencial considerado`);
     }
     if (assessment?.notes) bullets.push("Notas adicionales documentadas");
 
     return (
-      <Card className="h-full bg-gradient-to-br from-amber-50 to-yellow-100 border-amber-200 hover:shadow-md transition-shadow">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-amber-500 text-white">
-              <Brain className="h-5 w-5" />
-            </div>
-            <CardTitle className="text-lg font-semibold text-amber-900">Evaluación</CardTitle>
+      <Card className="bg-white border-gray-200 shadow-sm rounded-xl p-6">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0">
+            <Brain className="h-6 w-6 text-white" />
           </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {bullets.length > 0 ? (
-            <ul className="space-y-2">
-              {bullets.slice(0, 3).map((item, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-amber-800">
-                  <span className="text-amber-500 mt-1">•</span>
-                  <span className="line-clamp-2">{item}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-amber-600/70 italic">Sin evaluación</p>
-          )}
-        </CardContent>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Evaluación</h3>
+            {bullets.length > 0 ? (
+              <ul className="space-y-2">
+                {bullets.slice(0, 4).map((item, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
+                    <span className="text-gray-400 mt-1 text-xs">•</span>
+                    <span className="leading-relaxed">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-500 italic">Sin evaluación</p>
+            )}
+          </div>
+        </div>
       </Card>
     );
   };
@@ -160,36 +129,34 @@ const MedicalSoapCards = ({ soapData, className = "" }: MedicalSoapCardsProps) =
     const { plan } = soapData;
     
     const bullets = [];
-    if (plan?.treatment) bullets.push("Tratamiento farmacológico");
-    if (plan?.recommendations) bullets.push("Indicaciones no farmacológicas");
-    if (plan?.orders) bullets.push("Estudios solicitados");
-    if (plan?.referrals) bullets.push("Interconsultas");
+    if (plan?.treatment) bullets.push(plan.treatment);
+    if (plan?.recommendations) bullets.push(plan.recommendations);
+    if (plan?.orders) bullets.push(plan.orders);
+    if (plan?.referrals) bullets.push(plan.referrals);
     if (plan?.followUp) bullets.push("Seguimiento programado");
 
     return (
-      <Card className="h-full bg-gradient-to-br from-teal-50 to-cyan-100 border-teal-200 hover:shadow-md transition-shadow">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-teal-600 text-white">
-              <ClipboardList className="h-5 w-5" />
-            </div>
-            <CardTitle className="text-lg font-semibold text-teal-900">Plan</CardTitle>
+      <Card className="bg-white border-gray-200 shadow-sm rounded-xl p-6">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-full bg-teal-600 flex items-center justify-center flex-shrink-0">
+            <ClipboardList className="h-6 w-6 text-white" />
           </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {bullets.length > 0 ? (
-            <ul className="space-y-2">
-              {bullets.slice(0, 4).map((item, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-teal-800">
-                  <span className="text-teal-500 mt-1">•</span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-teal-600/70 italic">Sin plan definido</p>
-          )}
-        </CardContent>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Plan</h3>
+            {bullets.length > 0 ? (
+              <ul className="space-y-2">
+                {bullets.slice(0, 4).map((item, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
+                    <span className="text-gray-400 mt-1 text-xs">•</span>
+                    <span className="leading-relaxed">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-500 italic">Sin plan definido</p>
+            )}
+          </div>
+        </div>
       </Card>
     );
   };
@@ -201,40 +168,36 @@ const MedicalSoapCards = ({ soapData, className = "" }: MedicalSoapCardsProps) =
     if (!laboratorio && !labs?.length) return null;
 
     return (
-      <Card className="bg-gradient-to-br from-slate-50 to-gray-100 border-slate-200 hover:shadow-md transition-shadow">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-slate-500 text-white">
-              <TestTube className="h-5 w-5" />
-            </div>
-            <CardTitle className="text-lg font-semibold text-slate-900">Laboratorio</CardTitle>
+      <Card className="bg-white border-gray-200 shadow-sm rounded-xl p-6">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-full bg-gray-500 flex items-center justify-center flex-shrink-0">
+            <TestTube className="h-6 w-6 text-white" />
           </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {labs?.length ? (
-            <div className="space-y-2">
-              <p className="text-sm text-slate-700 mb-2">Resultados disponibles:</p>
-              <div className="flex flex-wrap gap-1">
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Laboratorio</h3>
+            {labs?.length ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4 text-sm font-medium text-gray-600 border-b pb-2">
+                  <span>Parámetro</span>
+                  <span>Resultado</span>
+                </div>
                 {labs.slice(0, 4).map((lab, idx) => (
-                  <Badge 
-                    key={idx}
-                    variant={lab.flagged ? "destructive" : "secondary"}
-                    className="text-xs font-mono bg-slate-100 text-slate-800"
-                  >
-                    {lab.parameter}
-                  </Badge>
+                  <div key={idx} className="grid grid-cols-2 gap-4 text-sm text-gray-700">
+                    <span className="font-medium">{lab.parameter}</span>
+                    <span className={lab.flagged ? "text-red-600 font-medium" : ""}>{lab.result || "Normal"}</span>
+                  </div>
                 ))}
                 {labs.length > 4 && (
-                  <Badge variant="outline" className="text-xs">
-                    +{labs.length - 4} más
-                  </Badge>
+                  <div className="text-xs text-gray-500 pt-2 border-t">
+                    +{labs.length - 4} parámetros adicionales
+                  </div>
                 )}
               </div>
-            </div>
-          ) : laboratorio ? (
-            <p className="text-sm text-slate-700 line-clamp-3">{laboratorio}</p>
-          ) : null}
-        </CardContent>
+            ) : laboratorio ? (
+              <p className="text-sm text-gray-700 leading-relaxed">{laboratorio}</p>
+            ) : null}
+          </div>
+        </div>
       </Card>
     );
   };
@@ -244,29 +207,26 @@ const MedicalSoapCards = ({ soapData, className = "" }: MedicalSoapCardsProps) =
     if (!diagnosis) return null;
 
     return (
-      <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 border-blue-200 hover:shadow-md transition-shadow">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-blue-600 text-white">
-              <FileText className="h-5 w-5" />
-            </div>
-            <CardTitle className="text-lg font-semibold text-blue-900">Diagnóstico Presuntivo</CardTitle>
-            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">IA</Badge>
+      <Card className="bg-white border-gray-200 shadow-sm rounded-xl p-6">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center flex-shrink-0">
+            <FileText className="h-6 w-6 text-white" />
           </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <p className="text-sm text-blue-800 leading-relaxed">{diagnosis}</p>
-        </CardContent>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Diagnóstico Presuntivo</h3>
+            <p className="text-sm text-gray-700 leading-relaxed">{diagnosis}</p>
+          </div>
+        </div>
       </Card>
     );
   };
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`max-w-6xl mx-auto p-6 space-y-8 ${className}`}>
       {/* Header */}
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold text-slate-900">Resumen Clínico – Formato SOAP</h1>
-        <p className="text-slate-600">
+      <div className="text-center space-y-3">
+        <h1 className="text-3xl font-bold text-gray-900">Resumen Clínico – Formato SOAP</h1>
+        <p className="text-gray-600 text-lg">
           {soapData.meta?.patientName && `${soapData.meta.patientName} • `}
           {soapData.meta?.dateTime && new Date(soapData.meta.dateTime).toLocaleDateString()}
           {soapData.subjective?.chiefComplaint && ` • ${soapData.subjective.chiefComplaint.slice(0, 50)}...`}
@@ -275,11 +235,11 @@ const MedicalSoapCards = ({ soapData, className = "" }: MedicalSoapCardsProps) =
 
       {/* Alerts if any */}
       {soapData.alerts && soapData.alerts.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3 justify-center">
           {soapData.alerts.map((alert, index) => (
             <div
               key={index}
-              className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg"
+              className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-lg"
             >
               <AlertTriangle className="h-4 w-4 text-red-500" />
               <span className="text-sm font-medium text-red-800">{alert.message}</span>
@@ -289,17 +249,13 @@ const MedicalSoapCards = ({ soapData, className = "" }: MedicalSoapCardsProps) =
       )}
 
       {/* SOAP Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {renderSubjectiveCard()}
         {renderObjectiveCard()}
         {renderAssessmentCard()}
         {renderPlanCard()}
-      </div>
-
-      {/* Additional Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {renderLabCard()}
         {renderDiagnosisCard()}
+        {renderLabCard()}
       </div>
     </div>
   );
