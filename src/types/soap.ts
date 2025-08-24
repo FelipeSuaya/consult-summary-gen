@@ -1,38 +1,79 @@
 
+// n8n response format
+export interface N8nResponse {
+  transcripcion: string;
+  Subjective: string;
+  Objective: string;
+  Assessment: string;
+  Plan: string;
+  "Diagnostico Presuntivo": string;
+  Laboratorio: string;
+}
+
+// Internal SoapData interface (detailed structure for UI)
 export interface SoapData {
   meta?: {
-    patientName?: string;  // "APELLIDO, Nombre" si se dispone
-    age?: string;          // "45 años"
-    id?: string;           // DNI/HC
-    dateTime?: string;     // ISO
-    clinician?: string;    // "Dr./Dra. Apellido"
-    source?: "AI" | "MD";  // Procedencia del resumen
-    version?: string;      // p.ej. "v1.2"
+    patientName?: string;
+    age?: string;
+    id?: string;
+    dateTime?: string;
+    clinician?: string;
+    source?: "AI" | "MD";
+    version?: string;
   };
+  transcripcion?: string;
   subjective?: {
     chiefComplaint?: string;
-    hpi?: string; // Historia de enfermedad actual (OPQRST/OLDCARTS si aplica)
-    personalHistory?: string; // antecedentes personales y quirúrgicos relevantes si surgen
+    hpi?: string;
+    personalHistory?: string;
     familyHistory?: string;
-    socialHistory?: string; // hábitos / tóxicos si surgen
+    socialHistory?: string;
   };
   objective?: {
     vitals?: Array<{label: string; value: string; unit?: string; flagged?: "high" | "low" | "abnormal" | null}>;
     physicalExam?: string;
-    studiesNarrative?: string; // descripción breve de imágenes/otros
+    studiesNarrative?: string;
     labs?: Array<{ parameter: string; result: string; reference?: string; unit?: string; flagged?: "high"|"low"|"abnormal"|null }>;
   };
   assessment?: {
-    impression?: string; // impresión diagnóstica del médico
-    differentials?: string[]; // opcional
-    notes?: string; // aclaraciones del profesional
+    impression?: string;
+    differentials?: string[];
+    notes?: string;
   };
   plan?: {
-    treatment?: string;     // plan terapéutico + posología si figura
+    treatment?: string;
     recommendations?: string;
-    orders?: string;        // estudios solicitados
-    referrals?: string;     // interconsultas/derivaciones
-    followUp?: string;      // control/seguimiento
+    orders?: string;
+    referrals?: string;
+    followUp?: string;
   };
-  aiPresumptiveDx?: string; // diagnóstico presuntivo IA (si provisto)
+  diagnosticoPresuntivo?: string;
+  aiPresumptiveDx?: string; // backward compatibility
+  laboratorio?: string;
+  alerts?: Array<{
+    type: "warning" | "critical" | "info";
+    message: string;
+  }>;
 }
+
+// Converter function from n8n format to internal format
+export const convertN8nToSoapData = (n8nData: N8nResponse, meta?: SoapData['meta']): SoapData => {
+  return {
+    meta,
+    transcripcion: n8nData.transcripcion,
+    subjective: {
+      chiefComplaint: n8nData.Subjective,
+    },
+    objective: {
+      physicalExam: n8nData.Objective,
+    },
+    assessment: {
+      impression: n8nData.Assessment,
+    },
+    plan: {
+      treatment: n8nData.Plan,
+    },
+    diagnosticoPresuntivo: n8nData["Diagnostico Presuntivo"],
+    laboratorio: n8nData.Laboratorio,
+  };
+};

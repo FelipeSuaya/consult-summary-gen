@@ -435,7 +435,8 @@ const SoapSummary = ({ soapData, alerts = [], historyEntries = [], className = "
   };
 
   const renderAiDiagnosis = () => {
-    if (!soapData.aiPresumptiveDx) return null;
+    const diagnosis = soapData.diagnosticoPresuntivo || soapData.aiPresumptiveDx;
+    if (!diagnosis) return null;
 
     return (
       <Card className="bg-gradient-to-br from-blue-50/50 to-sky-50/50 dark:from-blue-950/20 dark:to-sky-950/20 backdrop-blur-sm border border-blue-200/50 dark:border-blue-800/50 rounded-2xl shadow-sm">
@@ -451,7 +452,7 @@ const SoapSummary = ({ soapData, alerts = [], historyEntries = [], className = "
         
         <CardContent className="pt-0">
           <p className="text-sm leading-relaxed text-blue-900 dark:text-blue-100">
-            {soapData.aiPresumptiveDx}
+            {soapData.diagnosticoPresuntivo || soapData.aiPresumptiveDx}
           </p>
         </CardContent>
       </Card>
@@ -521,7 +522,7 @@ const SoapSummary = ({ soapData, alerts = [], historyEntries = [], className = "
           )}
 
           {/* AI Diagnosis */}
-          {soapData.aiPresumptiveDx && (
+          {(soapData.diagnosticoPresuntivo || soapData.aiPresumptiveDx) && (
             <div className="md:col-span-2">
               {renderAiDiagnosis()}
             </div>

@@ -79,7 +79,7 @@ const sampleSoapData: SoapData = {
     referrals: "Interconsulta con neurología si persisten síntomas tras tratamiento.",
     followUp: "Control en 1 semana. Consulta urgente si empeora o aparecen síntomas neurológicos."
   },
-  aiPresumptiveDx: "Cefalea tensional vs cefalea secundaria a causa orgánica no especificada."
+  diagnosticoPresuntivo: "Cefalea tensional vs cefalea secundaria a causa orgánica no especificada."
 };
 
 const SoapSummaryPage = () => {
