@@ -109,6 +109,46 @@ export function parseTextToSoapData(text: string, patientName?: string): SoapDat
       soapData.diagnosticoPresuntivo = content;
     } else if (firstLine.includes('laboratorio')) {
       soapData.laboratorio = content;
+      // Parse lab tables when in laboratorio section
+      if (content.includes('|') || content.includes('\t')) {
+        const separator = content.includes('|') ? '|' : '\t';
+        
+        // Check if it's a single line with multiple lab results (pipe-separated inline format)
+        if (separator === '|' && !content.includes('\n') && content.split('|').length > 3) {
+          const parts = content.split('|').map(part => part.trim());
+          const labs = [];
+          
+          // Group every 3 parts into parameter, result, reference
+          for (let i = 0; i < parts.length; i += 3) {
+            if (i + 2 < parts.length) {
+              labs.push({
+                parameter: parts[i] || 'Parámetro',
+                result: parts[i + 1] || 'Resultado', 
+                reference: parts[i + 2] || '',
+                unit: ''
+              });
+            }
+          }
+          soapData.objective!.labs = labs;
+        } else {
+          // Handle traditional line-by-line format
+          const lines = content.split('\n').filter(line => line.trim());
+          
+          // Skip header line if it contains "Parámetro" or similar
+          const startIndex = lines[0] && (lines[0].includes('Parámetro') || lines[0].includes('parámetro')) ? 1 : 0;
+          const labRows = lines.slice(startIndex).filter(line => line.includes(separator));
+          
+          soapData.objective!.labs = labRows.map(row => {
+            const cells = row.split(separator).map(cell => cell.trim()).filter(cell => cell);
+            return {
+              parameter: cells[0] || 'Parámetro',
+              result: cells[1] || 'Resultado',
+              reference: cells[2] || '',
+              unit: ''
+            };
+          });
+        }
+      }
     } else {
       // If no specific section match, treat as general content
       if (!soapData.subjective!.chiefComplaint) {
