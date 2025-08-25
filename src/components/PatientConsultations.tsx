@@ -13,6 +13,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { updateConsultation } from "@/lib/storage";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import React from "react";
+import MedicalSoapCards from "@/components/soap/MedicalSoapCards";
+import { parseTextToSoapData } from "@/lib/utils";
 
 interface PatientConsultationsProps {
   patientId: string;
@@ -450,7 +452,10 @@ const PatientConsultations = ({
                               </Button>
                             </div>
                             <div className="bg-white p-4 rounded-md border border-cyan-100 overflow-x-auto">
-                              {processTextWithTables(consultation.summary)}
+                              <MedicalSoapCards 
+                                soapData={parseTextToSoapData(consultation.summary, consultation.patientName)}
+                                className="space-y-4"
+                              />
                             </div>
                           </div>
                           

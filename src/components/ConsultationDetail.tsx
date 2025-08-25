@@ -11,6 +11,8 @@ import { getPatientById } from "@/lib/patients";
 import { Textarea } from "@/components/ui/textarea";
 import { updateConsultation } from "@/lib/storage";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import MedicalSoapCards from "@/components/soap/MedicalSoapCards";
+import { parseTextToSoapData } from "@/lib/utils";
 
 interface ConsultationDetailProps {
   consultation: ConsultationRecord;
@@ -581,7 +583,10 @@ const ConsultationDetail = ({ consultation, onBack }: ConsultationDetailProps) =
                   />
                 ) : (
                   <div className="bg-white rounded-lg">
-                    {processTextWithTables(consultation.summary || "No hay resumen disponible")}
+                    <MedicalSoapCards 
+                      soapData={parseTextToSoapData(consultation.summary || "", consultation.patientName)}
+                      className="space-y-4"
+                    />
                   </div>
                 )}
               </div>
