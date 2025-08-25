@@ -61,7 +61,12 @@ export function parseTextToSoapData(text: string, patientName?: string): SoapDat
         // Parse lab tables
         if (content.includes('|') || content.includes('\t')) {
           const separator = content.includes('|') ? '|' : '\t';
-          const labRows = content.split('\n').filter(line => line.includes(separator));
+          const lines = content.split('\n').filter(line => line.trim());
+          
+          // Skip header line if it contains "Parámetro" or similar
+          const startIndex = lines[0] && (lines[0].includes('Parámetro') || lines[0].includes('parámetro')) ? 1 : 0;
+          const labRows = lines.slice(startIndex).filter(line => line.includes(separator));
+          
           soapData.objective!.labs = labRows.map(row => {
             const cells = row.split(separator).map(cell => cell.trim()).filter(cell => cell);
             return {

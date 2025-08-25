@@ -1,5 +1,6 @@
 import { SoapData } from "@/types/soap";
 import { Card } from "@/components/ui/card";
+import LabTable from "@/components/soap/LabTable";
 import { 
   MessageSquare, 
   Stethoscope, 
@@ -257,29 +258,7 @@ const MedicalSoapCards = ({ soapData, className = "" }: MedicalSoapCardsProps) =
           <div className="space-y-4">
             {labs?.length ? (
               <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-slate-200/50">
-                <div className="overflow-hidden">
-                  <div className="grid grid-cols-3 gap-4 text-sm font-bold text-slate-800 border-b border-slate-300 pb-3 mb-4">
-                    <span>Parámetro</span>
-                    <span>Resultado</span>
-                    <span>Estado</span>
-                  </div>
-                  {labs.slice(0, 6).map((lab, idx) => (
-                    <div key={idx} className="grid grid-cols-3 gap-4 text-sm text-slate-800 py-2 border-b border-slate-200 last:border-b-0">
-                      <span className="font-semibold">{lab.parameter}</span>
-                      <span className={lab.flagged ? "text-red-600 font-semibold" : "font-medium"}>{lab.result || "Normal"}</span>
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                        lab.flagged ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                      }`}>
-                        {lab.flagged ? 'Alterado' : 'Normal'}
-                      </span>
-                    </div>
-                  ))}
-                  {labs.length > 6 && (
-                    <div className="text-sm text-slate-600 pt-3 text-center font-medium">
-                      +{labs.length - 6} parámetros adicionales
-                    </div>
-                  )}
-                </div>
+                <LabTable labs={labs} />
               </div>
             ) : laboratorio ? (
               <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-slate-200/50">
