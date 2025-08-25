@@ -56,13 +56,14 @@ export function parseTextToSoapData(text: string, patientName?: string): SoapDat
               unit: ''
             };
           });
-      } else if (firstLine.includes('laboratorio') || content.includes('|')) {
+      } else if (firstLine.includes('laboratorio') || content.includes('|') || content.includes('\t')) {
         soapData.laboratorio = content;
         // Parse lab tables
-        if (content.includes('|')) {
-          const labRows = content.split('\n').filter(line => line.includes('|'));
+        if (content.includes('|') || content.includes('\t')) {
+          const separator = content.includes('|') ? '|' : '\t';
+          const labRows = content.split('\n').filter(line => line.includes(separator));
           soapData.objective!.labs = labRows.map(row => {
-            const cells = row.split('|').map(cell => cell.trim()).filter(cell => cell);
+            const cells = row.split(separator).map(cell => cell.trim()).filter(cell => cell);
             return {
               parameter: cells[0] || 'Parámetro',
               result: cells[1] || 'Resultado',
