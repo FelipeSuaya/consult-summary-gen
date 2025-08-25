@@ -332,7 +332,11 @@ const PatientsList = ({
                   
                   {expandedPatient === patient.id && (
                     <div className="mt-4 pt-4 border-t border-medical-100">
-                      <PatientConsultations patientId={patient.id} />
+                      <PatientConsultations 
+                        patientId={patient.id} 
+                        patientName={patient.name}
+                        patientAge={patient.age}
+                      />
                     </div>
                   )}
                 </div>

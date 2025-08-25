@@ -15,9 +15,12 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import React from "react";
 import MedicalSoapCards from "@/components/soap/MedicalSoapCards";
 import { parseTextToSoapData } from "@/lib/utils";
+import ConsultationFullscreenModal from "@/components/ConsultationFullscreenModal";
 
 interface PatientConsultationsProps {
   patientId: string;
+  patientName?: string;
+  patientAge?: string;
 }
 
 const LAB_NAMES = [
@@ -240,13 +243,16 @@ const processTextWithTables = (text: string) => {
 };
 
 const PatientConsultations = ({
-  patientId
+  patientId,
+  patientName,
+  patientAge
 }: PatientConsultationsProps) => {
   const [selectedConsultation, setSelectedConsultation] = useState<ConsultationRecord | null>(null);
   const [editMode, setEditMode] = useState<string | null>(null);
   const [editedSummary, setEditedSummary] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showFullscreenModal, setShowFullscreenModal] = useState(false);
   const {
     toast
   } = useToast();
@@ -400,77 +406,17 @@ const PatientConsultations = ({
                       </div>
                     </div>
                     
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="mt-2 border-cyan-200 text-cyan-700 hover:bg-cyan-50" onClick={() => setSelectedConsultation(consultation)}>
-                          Ver consulta completa
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent 
-                        className="max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto p-6"
-                        fullWidth
-                        aria-describedby="consultation-details"
-                      >
-                        <DialogHeader>
-                          <DialogTitle className="text-xl text-cyan-900 flex items-center gap-2">
-                            <Calendar className="h-5 w-5 text-cyan-700" />
-                            Consulta del {format(new Date(consultation.dateTime), "PPP", {
-                        locale: es
-                      })}
-                          </DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 mt-4" id="consultation-details">
-                          <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 p-2 rounded-md border border-gray-100">
-                            <Clock className="h-4 w-4" />
-                            <span>{format(new Date(consultation.dateTime), "p", {
-                          locale: es
-                        })}</span>
-                          </div>
-                          
-                          {consultation.audioUrl && <div className="mt-4">
-                              <h4 className="font-medium mb-2 text-cyan-900 flex items-center gap-2">
-                                <HeartPulse className="h-4 w-4 text-cyan-700" />
-                                Audio de la consulta:
-                              </h4>
-                              <div className="bg-gray-50 p-3 rounded-md border border-gray-100">
-                                <audio controls className="w-full">
-                                  <source src={consultation.audioUrl} type="audio/webm" />
-                                  Su navegador no soporta el elemento de audio.
-                                </audio>
-                              </div>
-                            </div>}
-                          
-                          <div className="mt-4">
-                            <div className="flex justify-between items-center">
-                              <h4 className="font-medium mb-2 text-cyan-900 flex items-center gap-2">
-                                <FileText className="h-4 w-4 text-cyan-700" />
-                                Resumen:
-                              </h4>
-                              <Button variant="outline" size="sm" onClick={() => handleEditSummary(consultation)} className="border-cyan-200 text-cyan-700 hover:bg-cyan-50">
-                                <PencilLine className="h-4 w-4 mr-1" />
-                                Editar
-                              </Button>
-                            </div>
-                            <div className="bg-white p-4 rounded-md border border-cyan-100 overflow-x-auto">
-                              <MedicalSoapCards 
-                                soapData={parseTextToSoapData(consultation.summary, consultation.patientName)}
-                                className="space-y-4"
-                              />
-                            </div>
-                          </div>
-                          
-                          {consultation.transcription && <div className="mt-4">
-                              <h4 className="font-medium mb-2 text-cyan-900 flex items-center gap-2">
-                                <FileText className="h-4 w-4 text-cyan-700" />
-                                Transcripción completa:
-                              </h4>
-                              <div className="bg-gray-50 p-4 rounded-md whitespace-pre-line text-sm text-gray-700 max-h-[300px] overflow-y-auto border border-gray-200">
-                                {consultation.transcription}
-                              </div>
-                            </div>}
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2 border-cyan-200 text-cyan-700 hover:bg-cyan-50" 
+                      onClick={() => {
+                        setSelectedConsultation(consultation);
+                        setShowFullscreenModal(true);
+                      }}
+                    >
+                      Ver consulta completa
+                    </Button>
                   </> : <p className="text-sm text-gray-500 italic bg-gray-50 p-3 rounded-md border border-dashed border-gray-200">No hay resumen disponible para esta consulta.</p>}
               </div>
             </AccordionContent>
@@ -537,6 +483,19 @@ const PatientConsultations = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de pantalla completa */}
+      <ConsultationFullscreenModal
+        consultation={selectedConsultation}
+        isOpen={showFullscreenModal}
+        onClose={() => {
+          setShowFullscreenModal(false);
+          setSelectedConsultation(null);
+        }}
+        patientName={patientName}
+        patientAge={patientAge}
+        patientId={patientId}
+      />
     </div>;
 };
 
