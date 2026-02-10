@@ -3,10 +3,9 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Patient } from "@/types";
 import { getPatients, deletePatient } from "@/lib/patients";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { UserPlus, Search, Trash2, Phone, Mail, ChevronDown, ChevronUp, Stethoscope, User, Calendar } from "lucide-react";
+import { UserPlus, Search, Trash2, Phone, Mail, ChevronDown, ChevronUp, Stethoscope, User, Calendar, Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -23,9 +22,7 @@ interface PatientsListProps {
   onStartConsultation?: (patient: Patient) => void;
 }
 
-const PatientsList = ({
-  onStartConsultation
-}: PatientsListProps) => {
+const PatientsList = ({ onStartConsultation }: PatientsListProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   const [patientToDelete, setPatientToDelete] = useState<string | null>(null);
@@ -50,19 +47,16 @@ const PatientsList = ({
 
   useEffect(() => {
     if (searchTerm.trim() === "") {
-      // Sort patients by first consultation date if available
       let sortedPatients = [...patients];
       
       if (sortByDateAscending) {
         sortedPatients.sort((a, b) => {
-          // Handle cases where firstConsultationDate might be undefined
           if (!a.firstConsultationDate) return 1;
           if (!b.firstConsultationDate) return -1;
           return new Date(a.firstConsultationDate).getTime() - new Date(b.firstConsultationDate).getTime();
         });
       } else {
         sortedPatients.sort((a, b) => {
-          // Handle cases where firstConsultationDate might be undefined
           if (!a.firstConsultationDate) return 1;
           if (!b.firstConsultationDate) return -1;
           return new Date(b.firstConsultationDate).getTime() - new Date(a.firstConsultationDate).getTime();
@@ -83,16 +77,9 @@ const PatientsList = ({
     if (patientToDelete) {
       const error = await deletePatient(patientToDelete);
       if (error) {
-        toast({
-          title: "Error",
-          description: error,
-          variant: "destructive"
-        });
+        toast({ title: "Error", description: error, variant: "destructive" });
       } else {
-        toast({
-          title: "Paciente Eliminado",
-          description: "El paciente ha sido eliminado correctamente"
-        });
+        toast({ title: "Paciente eliminado", description: "El paciente ha sido eliminado correctamente" });
         refetch();
       }
       setPatientToDelete(null);
@@ -101,37 +88,22 @@ const PatientsList = ({
 
   const handleSavePatient = async () => {
     if (!editingPatient || !editingPatient.name.trim()) {
-      toast({
-        title: "Nombre Requerido",
-        description: "Por favor ingrese el nombre del paciente",
-        variant: "destructive"
-      });
+      toast({ title: "Nombre requerido", description: "Por favor ingrese el nombre del paciente", variant: "destructive" });
       return;
     }
     try {
       const result = await savePatient(editingPatient);
       if (result.error) {
-        toast({
-          title: "Error",
-          description: result.error,
-          variant: "destructive"
-        });
+        toast({ title: "Error", description: result.error, variant: "destructive" });
         return;
       }
-      toast({
-        title: "Paciente Guardado",
-        description: "Los datos del paciente han sido guardados correctamente"
-      });
+      toast({ title: "Guardado", description: "Datos del paciente guardados correctamente" });
       setShowNewPatientDialog(false);
       setEditingPatient(null);
       refetch();
     } catch (error) {
       console.error("Error al guardar paciente:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo guardar el paciente",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "No se pudo guardar el paciente", variant: "destructive" });
     }
   };
 
@@ -141,24 +113,12 @@ const PatientsList = ({
   };
 
   const handleNewPatient = () => {
-    setEditingPatient({
-      id: "",
-      name: "",
-      dni: "",
-      phone: "",
-      age: "",
-      email: "",
-      notes: ""
-    });
+    setEditingPatient({ id: "", name: "", dni: "", phone: "", age: "", email: "", notes: "" });
     setShowNewPatientDialog(true);
   };
 
   const togglePatientExpand = (patientId: string) => {
-    if (expandedPatient === patientId) {
-      setExpandedPatient(null);
-    } else {
-      setExpandedPatient(patientId);
-    }
+    setExpandedPatient(expandedPatient === patientId ? null : patientId);
   };
 
   const handleDateChange = (start: Date | undefined, end: Date | undefined) => {
@@ -166,260 +126,223 @@ const PatientsList = ({
     setEndDate(end);
   };
 
-  const toggleSortDirection = () => {
-    setSortByDateAscending(!sortByDateAscending);
-  };
-
   if (isLoading) {
-    return <Card>
-        <CardHeader>
-          <CardTitle>Pacientes</CardTitle>
-          <CardDescription>Cargando pacientes...</CardDescription>
-        </CardHeader>
-      </Card>;
+    return (
+      <div className="rounded-xl border border-border bg-card p-8 shadow-sm">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground justify-center">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          Cargando pacientes...
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <Card>
-        <CardHeader>
-          <CardTitle>Pacientes</CardTitle>
-          <CardDescription className="text-red-500">
-            Error al cargar los pacientes. Por favor, intenta de nuevo.
-          </CardDescription>
-        </CardHeader>
-      </Card>;
+    return (
+      <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-8">
+        <p className="text-sm text-destructive text-center">Error al cargar los pacientes.</p>
+      </div>
+    );
   }
 
-  return <Card className="shadow-lg border-none rounded-xl overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-medical-500 to-medical-600">
-        <div>
-          <CardTitle className="text-white text-2xl font-bold tracking-tight">Pacientes</CardTitle>
-          <CardDescription className="text-white/90">
-            {patients.length} paciente{patients.length !== 1 ? 's' : ''} registrado{patients.length !== 1 ? 's' : ''}
-          </CardDescription>
+  return (
+    <div className="space-y-4">
+      {/* Top bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="relative flex-1 w-full sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Buscar por nombre o DNI..." 
+            value={searchTerm} 
+            onChange={e => setSearchTerm(e.target.value)} 
+            className="pl-9 h-9 bg-card border-border"
+          />
         </div>
-        <div className="flex space-x-2">
-          <Button 
-            onClick={handleNewPatient} 
-            variant="secondary" 
-            className="bg-white/30 text-white hover:bg-white/40 transition-colors"
-          >
-            <UserPlus className="mr-2 h-4 w-4" />
-            Nuevo Paciente
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="bg-white/10 backdrop-blur-sm">
-        <div className="space-y-4">
-          <div className="relative mb-2">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-medical-400" />
-            <Input 
-              placeholder="Buscar paciente por nombre o DNI..." 
-              value={searchTerm} 
-              onChange={e => setSearchTerm(e.target.value)} 
-              className="pl-8 border-medical-300 focus:ring-medical-500 transition-all text-medical-900 placeholder-medical-600"
-            />
-          </div>
-
+        <div className="flex items-center gap-2">
           <DateFilter 
             onDateChange={handleDateChange} 
-            onSortToggle={toggleSortDirection}
+            onSortToggle={() => setSortByDateAscending(!sortByDateAscending)}
             sortAscending={sortByDateAscending}
             showSortToggle={true}
           />
+          <Button onClick={handleNewPatient} size="sm" className="h-9 gap-1.5">
+            <UserPlus className="h-3.5 w-3.5" />
+            Nuevo
+          </Button>
+        </div>
+      </div>
 
-          <div className="space-y-4 mt-4">
-            {filteredPatients.length === 0 ? (
-              <div className="text-center py-4 text-medical-700 bg-medical-50 rounded-lg">
-                No se encontraron pacientes con el criterio de búsqueda.
-              </div>
-            ) : (
-              filteredPatients.map(patient => (
-                <div 
-                  key={patient.id} 
-                  className="border border-medical-200 rounded-lg p-4 transition-all hover:shadow-sm bg-white"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center space-x-4">
-                      <Avatar className="h-12 w-12">
-                        <AvatarFallback className="bg-medical-100 text-medical-700">
-                          <User className="h-6 w-6" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-semibold text-medical-900">{patient.name}</h3>
-                        {patient.dni && <p className="text-sm text-medical-700">DNI: {patient.dni}</p>}
-                        <div className="mt-1">
-                          {patient.firstConsultationDate && (
-                            <div className="flex items-center text-sm text-medical-600">
-                              <Calendar className="h-3.5 w-3.5 mr-1 text-medical-500" />
-                              Primera consulta: {format(new Date(patient.firstConsultationDate), "dd/MM/yyyy", { locale: es })}
-                            </div>
-                          )}
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-2 text-sm text-medical-800">
-                          {patient.phone && (
-                            <div className="flex items-center bg-medical-100 px-2 py-1 rounded-full">
-                              <Phone className="h-3.5 w-3.5 mr-1 text-medical-700" />
-                              {patient.phone}
-                            </div>
-                          )}
-                          {patient.email && (
-                            <div className="flex items-center bg-medical-100 px-2 py-1 rounded-full">
-                              <Mail className="h-3.5 w-3.5 mr-1 text-medical-700" />
-                              {patient.email}
-                            </div>
-                          )}
-                          {patient.age && (
-                            <div className="flex items-center bg-medical-100 px-2 py-1 rounded-full">
-                              Edad: {patient.age}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex space-x-2">
-                      {onStartConsultation && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => onStartConsultation(patient)} 
-                          className="text-medical-700 border-medical-300 hover:bg-medical-50"
-                        >
-                          <Stethoscope className="mr-2 h-4 w-4" />
-                          Nueva Consulta
-                        </Button>
+      {/* Patient count */}
+      <p className="text-xs text-muted-foreground">
+        {filteredPatients.length} paciente{filteredPatients.length !== 1 ? 's' : ''}
+      </p>
+
+      {/* Patient List */}
+      <div className="space-y-2">
+        {filteredPatients.length === 0 ? (
+          <div className="rounded-xl border border-border bg-card p-8 text-center">
+            <User className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+            <p className="text-sm text-muted-foreground">No se encontraron pacientes</p>
+          </div>
+        ) : (
+          filteredPatients.map(patient => (
+            <div 
+              key={patient.id} 
+              className="rounded-xl border border-border bg-card p-4 transition-all hover:shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <Avatar className="h-10 w-10 shrink-0">
+                    <AvatarFallback className="bg-accent text-accent-foreground text-sm font-semibold">
+                      {patient.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-foreground truncate">{patient.name}</h3>
+                    {patient.dni && <p className="text-xs text-muted-foreground">DNI: {patient.dni}</p>}
+                    
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                      {patient.age && (
+                        <span className="inline-flex items-center text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                          {patient.age} años
+                        </span>
                       )}
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleEditPatient(patient)}
-                        className="text-medical-700 border-medical-300 hover:bg-medical-50"
-                      >
-                        Editar
-                      </Button>
-                      <Button 
-                        variant="destructive" 
-                        size="sm" 
-                        onClick={() => setPatientToDelete(patient.id)}
-                        className="text-red-700 border-red-300 bg-red-50 hover:bg-red-100"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-700" />
-                      </Button>
+                      {patient.phone && (
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                          <Phone className="h-3 w-3" />
+                          {patient.phone}
+                        </span>
+                      )}
+                      {patient.email && (
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                          <Mail className="h-3 w-3" />
+                          {patient.email}
+                        </span>
+                      )}
+                      {patient.firstConsultationDate && (
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(patient.firstConsultationDate), "dd/MM/yy", { locale: es })}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  
-                  <div className="mt-3 flex justify-between items-center">
+                </div>
+                
+                <div className="flex items-center gap-1 shrink-0">
+                  {onStartConsultation && (
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      onClick={() => togglePatientExpand(patient.id)} 
-                      className="text-sm flex items-center -ml-2 text-medical-700 hover:bg-medical-50"
+                      onClick={() => onStartConsultation(patient)} 
+                      className="h-8 px-2.5 text-primary hover:text-primary hover:bg-primary/10"
                     >
-                      {expandedPatient === patient.id ? (
-                        <>
-                          <ChevronUp className="h-4 w-4 mr-1" />
-                          Ocultar historial
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown className="h-4 w-4 mr-1" />
-                          Ver historial de consultas
-                        </>
-                      )}
+                      <Stethoscope className="h-3.5 w-3.5" />
                     </Button>
-                  </div>
-                  
-                  {expandedPatient === patient.id && (
-                    <div className="mt-4 pt-4 border-t border-medical-100">
-                      <PatientConsultations 
-                        patientId={patient.id} 
-                        patientName={patient.name}
-                        patientAge={patient.age}
-                      />
-                    </div>
                   )}
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleEditPatient(patient)}
+                    className="h-8 px-2.5 text-muted-foreground hover:text-foreground"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setPatientToDelete(patient.id)}
+                    className="h-8 px-2.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
-      </CardContent>
+              </div>
+              
+              <button 
+                onClick={() => togglePatientExpand(patient.id)} 
+                className="flex items-center gap-1 mt-3 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {expandedPatient === patient.id ? (
+                  <><ChevronUp className="h-3.5 w-3.5" /> Ocultar historial</>
+                ) : (
+                  <><ChevronDown className="h-3.5 w-3.5" /> Ver historial</>
+                )}
+              </button>
+              
+              {expandedPatient === patient.id && (
+                <div className="mt-3 pt-3 border-t border-border/50 animate-fade-in">
+                  <PatientConsultations 
+                    patientId={patient.id} 
+                    patientName={patient.name}
+                    patientAge={patient.age}
+                  />
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
 
+      {/* New/Edit Patient Dialog */}
       <Dialog open={showNewPatientDialog} onOpenChange={setShowNewPatientDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
-            <DialogTitle>{editingPatient?.id ? "Editar Paciente" : "Crear Nuevo Paciente"}</DialogTitle>
+            <DialogTitle>{editingPatient?.id ? "Editar Paciente" : "Nuevo Paciente"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Nombre Completo *</Label>
-              <Input id="name" value={editingPatient?.name || ""} onChange={e => setEditingPatient(prev => prev ? {
-              ...prev,
-              name: e.target.value
-            } : null)} placeholder="Nombre y apellidos" required />
+              <Input id="name" value={editingPatient?.name || ""} onChange={e => setEditingPatient(prev => prev ? { ...prev, name: e.target.value } : null)} placeholder="Nombre y apellidos" required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="dni">DNI/Documento</Label>
-              <Input id="dni" value={editingPatient?.dni || ""} onChange={e => setEditingPatient(prev => prev ? {
-              ...prev,
-              dni: e.target.value
-            } : null)} placeholder="Número de documento" />
+              <Input id="dni" value={editingPatient?.dni || ""} onChange={e => setEditingPatient(prev => prev ? { ...prev, dni: e.target.value } : null)} placeholder="Número de documento" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label htmlFor="phone">Teléfono</Label>
-                <Input id="phone" value={editingPatient?.phone || ""} onChange={e => setEditingPatient(prev => prev ? {
-                ...prev,
-                phone: e.target.value
-              } : null)} placeholder="Número de teléfono" />
+                <Input id="phone" value={editingPatient?.phone || ""} onChange={e => setEditingPatient(prev => prev ? { ...prev, phone: e.target.value } : null)} placeholder="Teléfono" />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="age">Edad</Label>
-                <Input id="age" value={editingPatient?.age || ""} onChange={e => setEditingPatient(prev => prev ? {
-                ...prev,
-                age: e.target.value
-              } : null)} placeholder="Edad" />
+                <Input id="age" value={editingPatient?.age || ""} onChange={e => setEditingPatient(prev => prev ? { ...prev, age: e.target.value } : null)} placeholder="Edad" />
               </div>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={editingPatient?.email || ""} onChange={e => setEditingPatient(prev => prev ? {
-              ...prev,
-              email: e.target.value
-            } : null)} placeholder="Correo electrónico" />
+              <Input id="email" type="email" value={editingPatient?.email || ""} onChange={e => setEditingPatient(prev => prev ? { ...prev, email: e.target.value } : null)} placeholder="Email" />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="notes">Notas</Label>
-              <Textarea id="notes" value={editingPatient?.notes || ""} onChange={e => setEditingPatient(prev => prev ? {
-              ...prev,
-              notes: e.target.value
-            } : null)} placeholder="Notas adicionales sobre el paciente" rows={3} />
+              <Textarea id="notes" value={editingPatient?.notes || ""} onChange={e => setEditingPatient(prev => prev ? { ...prev, notes: e.target.value } : null)} placeholder="Notas sobre el paciente" rows={3} />
             </div>
             <Button type="button" onClick={handleSavePatient}>
-              Guardar Paciente
+              Guardar
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
+      {/* Delete Confirmation */}
       <AlertDialog open={!!patientToDelete} onOpenChange={open => !open && setPatientToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogTitle>¿Eliminar paciente?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto eliminará permanentemente el paciente seleccionado y todas sus consultas asociadas.
+              Esta acción eliminará permanentemente al paciente y todas sus consultas asociadas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeletePatient} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction onClick={handleDeletePatient} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>;
+    </div>
+  );
 };
 
 export default PatientsList;

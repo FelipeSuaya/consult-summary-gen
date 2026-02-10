@@ -19,6 +19,9 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -68,17 +71,17 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				medical: {
-					'50': '#f0f8ff',
-					'100': '#e0f0fe',
-					'200': '#bae2fd',
-					'300': '#7ccafb',
-					'400': '#36adf7',
-					'500': '#0c92e9',
-					'600': '#0074c7',
-					'700': '#0060a2',
-					'800': '#055286',
-					'900': '#0a466f',
-					'950': '#062c49',
+					'50': '#eefbf6',
+					'100': '#d5f6e8',
+					'200': '#aeedd5',
+					'300': '#79debb',
+					'400': '#43c89d',
+					'500': '#20ad83',
+					'600': '#138c6b',
+					'700': '#107058',
+					'800': '#105947',
+					'900': '#0e493c',
+					'950': '#072923',
 				}
 			},
 			borderRadius: {
@@ -88,31 +91,33 @@ export default {
 			},
 			keyframes: {
 				'accordion-down': {
-					from: {
-						height: '0'
-					},
-					to: {
-						height: 'var(--radix-accordion-content-height)'
-					}
+					from: { height: '0' },
+					to: { height: 'var(--radix-accordion-content-height)' }
 				},
 				'accordion-up': {
-					from: {
-						height: 'var(--radix-accordion-content-height)'
-					},
-					to: {
-						height: '0'
-					}
+					from: { height: 'var(--radix-accordion-content-height)' },
+					to: { height: '0' }
 				},
 				'pulse-recording': {
-					'0%, 100%': { opacity: '1' },
-					'50%': { opacity: '0.5' }
+					'0%, 100%': { opacity: '1', transform: 'scale(1)' },
+					'50%': { opacity: '0.6', transform: 'scale(1.05)' }
+				},
+				'fade-in': {
+					'0%': { opacity: '0', transform: 'translateY(8px)' },
+					'100%': { opacity: '1', transform: 'translateY(0)' }
+				},
+				'slide-up': {
+					'0%': { opacity: '0', transform: 'translateY(16px)' },
+					'100%': { opacity: '1', transform: 'translateY(0)' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'pulse-recording': 'pulse-recording 2s ease-in-out infinite',
-				'pulse-once': 'pulse 0.5s ease-in-out 1'
+				'pulse-once': 'pulse 0.5s ease-in-out 1',
+				'fade-in': 'fade-in 0.4s ease-out',
+				'slide-up': 'slide-up 0.5s ease-out'
 			}
 		}
 	},

@@ -9,8 +9,7 @@ import { ConsultationRecord, Patient } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ensureConsultationAudiosBucket } from "@/lib/ensureStorageBucket";
 import { useToast } from "@/components/ui/use-toast";
-import { Card, CardContent } from "@/components/ui/card";
-import { Stethoscope, Users, BarChart3, Sparkles } from "lucide-react";
+import { Mic, Users, BarChart3 } from "lucide-react";
 
 const Index = () => {
   const [selectedConsultation, setSelectedConsultation] = useState<ConsultationRecord | null>(null);
@@ -54,144 +53,129 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-medical-50/30">
+    <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="container py-8">
+      <main className="container py-6 max-w-6xl">
         {selectedConsultation ? (
-          <div className="animate-in fade-in-0 slide-in-from-right-4 duration-500">
+          <div className="animate-fade-in">
             <ConsultationDetail consultation={selectedConsultation} onBack={handleBack} />
           </div>
         ) : showNewConsultation && newConsultation ? (
-          <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
+          <div className="animate-fade-in">
             <ConsultationDetail consultation={newConsultation} onBack={handleBack} />
           </div>
         ) : (
-          <div className="space-y-8">
-            {/* Hero Section */}
-            <div className="text-center py-8">
-              <div className="inline-flex items-center gap-2 bg-medical-50 text-medical-700 px-4 py-2 rounded-full text-sm font-medium mb-4">
-                <Sparkles className="h-4 w-4" />
-                Plataforma de Documentación Médica IA
-              </div>
-              <h1 className="text-4xl font-bold text-foreground mb-3 bg-gradient-to-r from-medical-700 via-medical-600 to-medical-800 bg-clip-text text-transparent">
-                Consultas Médicas Inteligentes
-              </h1>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Transcribe, resume y organiza tus consultas médicas de forma automática con tecnología de inteligencia artificial
-              </p>
-            </div>
-
-            {/* Navigation Tabs */}
+          <div className="space-y-6">
+            {/* Tabs Navigation */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <div className="flex justify-center mb-8">
-                <TabsList className="grid grid-cols-2 bg-card shadow-sm border p-1.5 h-auto">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-foreground tracking-tight">
+                    {activeTab === "consultas" ? "Consultas" : activeTab === "pacientes" ? "Pacientes" : "Estadísticas"}
+                  </h1>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    {activeTab === "consultas" 
+                      ? "Graba y gestiona consultas médicas" 
+                      : activeTab === "pacientes"
+                      ? "Gestiona tu base de pacientes"
+                      : "Análisis de datos clínicos"}
+                  </p>
+                </div>
+                <TabsList className="bg-muted/60 border border-border/50 p-1 h-auto">
                   <TabsTrigger 
                     value="consultas" 
-                    className="flex items-center gap-2 px-6 py-3 data-[state=active]:bg-medical-500 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-md"
+                    className="flex items-center gap-1.5 px-3.5 py-2 text-sm data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md transition-all"
                   >
-                    <Stethoscope className="h-4 w-4" />
-                    <span className="font-medium">Consultas</span>
+                    <Mic className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Consultas</span>
                   </TabsTrigger>
-                  
                   <TabsTrigger 
                     value="pacientes" 
-                    className="flex items-center gap-2 px-6 py-3 data-[state=active]:bg-medical-500 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-md"
+                    className="flex items-center gap-1.5 px-3.5 py-2 text-sm data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md transition-all"
                   >
-                    <Users className="h-4 w-4" />
-                    <span className="font-medium">Pacientes</span>
+                    <Users className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Pacientes</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="estadisticas" 
+                    className="flex items-center gap-1.5 px-3.5 py-2 text-sm data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md transition-all"
+                  >
+                    <BarChart3 className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Estadísticas</span>
                   </TabsTrigger>
                 </TabsList>
               </div>
               
-              <TabsContent value="consultas" className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
-                <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
+              <TabsContent value="consultas" className="animate-fade-in mt-0">
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                   {/* Recording Section */}
-                  <div className="xl:col-span-2">
-                    <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-slate-50/50">
-                      <CardContent className="p-6">
-                        <div className="flex items-center gap-3 mb-6">
-                          <div className="p-2 bg-medical-100 rounded-lg">
-                            <Stethoscope className="h-5 w-5 text-medical-600" />
-                          </div>
-                          <div>
-                            <h2 className="text-xl font-bold text-foreground">
-                              {selectedPatientForConsultation ? `Nueva Consulta` : "Nueva Consulta"}
-                            </h2>
-                            {selectedPatientForConsultation && (
-                              <p className="text-sm text-medical-600 font-medium">
-                                Paciente: {selectedPatientForConsultation.name}
-                              </p>
-                            )}
-                          </div>
+                  <div className="lg:col-span-2">
+                    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h2 className="text-base font-semibold text-foreground">
+                            Nueva Consulta
+                          </h2>
+                          {selectedPatientForConsultation && (
+                            <p className="text-xs text-primary font-medium mt-0.5">
+                              {selectedPatientForConsultation.name}
+                            </p>
+                          )}
                         </div>
-                        
-                        <AudioRecorder 
-                          onRecordingComplete={handleRecordingComplete} 
-                          preselectedPatient={selectedPatientForConsultation} 
-                        />
-                        
-                        {selectedPatientForConsultation && (
-                          <div className="mt-4 pt-4 border-t border-border/50">
-                            <button 
-                              onClick={() => setSelectedPatientForConsultation(null)} 
-                              className="text-sm text-medical-600 hover:text-medical-700 hover:underline transition-colors"
-                            >
-                              Cambiar paciente
-                            </button>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
+                          <Mic className="h-4 w-4 text-primary" />
+                        </div>
+                      </div>
+                      
+                      <AudioRecorder 
+                        onRecordingComplete={handleRecordingComplete} 
+                        preselectedPatient={selectedPatientForConsultation} 
+                      />
+                      
+                      {selectedPatientForConsultation && (
+                        <div className="mt-4 pt-3 border-t border-border/50">
+                          <button 
+                            onClick={() => setSelectedPatientForConsultation(null)} 
+                            className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            Cambiar paciente
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
-                  {/* Statistics Section */}
-                  <div className="xl:col-span-3">
-                    <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-slate-50/50 h-full">
-                      <CardContent className="p-6">
-                        <div className="flex items-center gap-3 mb-6">
-                          <div className="p-2 bg-medical-100 rounded-lg">
-                            <BarChart3 className="h-5 w-5 text-medical-600" />
-                          </div>
-                          <h2 className="text-xl font-bold text-foreground">Estadísticas</h2>
+                  {/* Quick Stats / Recent */}
+                  <div className="lg:col-span-3">
+                    <div className="rounded-xl border border-border bg-card p-5 shadow-sm h-full">
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-base font-semibold text-foreground">
+                          Análisis por Paciente
+                        </h2>
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
+                          <BarChart3 className="h-4 w-4 text-primary" />
                         </div>
-                        <ConsultationsList onConsultationSelect={setSelectedConsultation} />
-                      </CardContent>
-                    </Card>
+                      </div>
+                      <ConsultationsList onConsultationSelect={setSelectedConsultation} />
+                    </div>
                   </div>
                 </div>
               </TabsContent>
               
-              <TabsContent value="pacientes" className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
-                <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-slate-50/50">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="p-2 bg-medical-100 rounded-lg">
-                        <Users className="h-5 w-5 text-medical-600" />
-                      </div>
-                      <h2 className="text-xl font-bold text-foreground">Gestión de Pacientes</h2>
-                    </div>
-                    <PatientsList onStartConsultation={handleStartConsultationForPatient} />
-                  </CardContent>
-                </Card>
+              <TabsContent value="pacientes" className="animate-fade-in mt-0">
+                <PatientsList onStartConsultation={handleStartConsultationForPatient} />
+              </TabsContent>
+
+              <TabsContent value="estadisticas" className="animate-fade-in mt-0">
+                <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+                  <ConsultationsList onConsultationSelect={setSelectedConsultation} />
+                </div>
               </TabsContent>
             </Tabs>
           </div>
         )}
       </main>
-      
-      <footer className="border-t border-border/40 bg-card/50 backdrop-blur-sm mt-16">
-        <div className="container py-8">
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">
-              © 2024 ConsultSummary — Plataforma de Documentación Médica con IA
-            </p>
-            <p className="text-xs text-muted-foreground/70 mt-1">
-              Desarrollado para profesionales de la salud
-            </p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

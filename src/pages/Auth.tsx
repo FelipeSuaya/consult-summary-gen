@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Stethoscope, Shield, Sparkles, UserPlus, LogIn } from "lucide-react";
+import { Activity, Shield, Sparkles, Mic } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 const Auth = () => {
@@ -74,110 +74,80 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-medical-50/30">
-      {/* Header */}
-      <header className="border-b border-border/40 bg-background/95 backdrop-blur">
-        <div className="container flex h-16 items-center">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-medical-500/20 rounded-xl blur-sm" />
-              <div className="relative bg-gradient-to-br from-medical-500 to-medical-600 p-2.5 rounded-xl shadow-lg">
-                <Stethoscope className="h-6 w-6 text-white" />
-              </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Minimal Header */}
+      <header className="border-b border-border/60 bg-card/80 backdrop-blur-xl">
+        <div className="container flex h-14 items-center">
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground shadow-sm">
+              <Activity className="h-4 w-4" strokeWidth={2.5} />
             </div>
-            <div className="flex flex-col">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-medical-600 to-medical-800 bg-clip-text text-transparent">
-                ConsultSummary
-              </h1>
-              <span className="text-xs text-muted-foreground font-medium">
-                Medical Assistant
-              </span>
-            </div>
+            <span className="text-base font-bold tracking-tight text-foreground">
+              ConsultSummary
+            </span>
           </div>
         </div>
       </header>
       
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center p-6 py-16">
+      <main className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-4xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-center">
-            {/* Left side - Features */}
-            <div className="space-y-8">
+            {/* Left side - Value Proposition */}
+            <div className="space-y-8 animate-fade-in">
               <div>
-                <div className="inline-flex items-center gap-2 bg-medical-50 text-medical-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
-                  <Sparkles className="h-4 w-4" />
-                  Tecnología Médica Avanzada
-                </div>
-                <h1 className="text-4xl font-bold text-foreground mb-4 bg-gradient-to-r from-medical-700 via-medical-600 to-medical-800 bg-clip-text text-transparent">
-                  Bienvenido a ConsultSummary
+                <h1 className="text-3xl font-bold text-foreground mb-3 tracking-tight">
+                  Documentación médica
+                  <br />
+                  <span className="text-primary">inteligente</span>
                 </h1>
-                <p className="text-lg text-muted-foreground">
-                  La plataforma de documentación médica más avanzada con inteligencia artificial para profesionales de la salud.
+                <p className="text-muted-foreground leading-relaxed">
+                  Transcribe, resume y organiza consultas médicas automáticamente con IA.
                 </p>
               </div>
               
               <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-medical-100 rounded-lg mt-1">
-                    <Stethoscope className="h-4 w-4 text-medical-600" />
+                {[
+                  { icon: Mic, title: "Transcripción automática", desc: "Audio a texto estructurado en tiempo real" },
+                  { icon: Sparkles, title: "Resúmenes con IA", desc: "Notas SOAP generadas automáticamente" },
+                  { icon: Shield, title: "Datos seguros", desc: "Encriptación y cumplimiento normativo" },
+                ].map(({ icon: Icon, title, desc }) => (
+                  <div key={title} className="flex items-start gap-3">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent text-accent-foreground shrink-0 mt-0.5">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+                      <p className="text-xs text-muted-foreground">{desc}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">Transcripción Automática</h3>
-                    <p className="text-sm text-muted-foreground">Convierte automáticamente tus consultas de audio a texto estructurado.</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-medical-100 rounded-lg mt-1">
-                    <Shield className="h-4 w-4 text-medical-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">Privacidad Total</h3>
-                    <p className="text-sm text-muted-foreground">Todos los datos están encriptados y cumplen con normativas médicas.</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-medical-100 rounded-lg mt-1">
-                    <Sparkles className="h-4 w-4 text-medical-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">Resúmenes Inteligentes</h3>
-                    <p className="text-sm text-muted-foreground">Genera resúmenes médicos estructurados automáticamente con IA.</p>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
             
             {/* Right side - Auth Form */}
-            <div>
-              <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
-                <CardHeader className="text-center pb-6">
-                  <CardTitle className="text-2xl">Acceso Profesional</CardTitle>
-                  <CardDescription className="text-base">
-                    Inicia sesión o regístrate para gestionar tus consultas médicas
+            <div className="animate-slide-up">
+              <Card className="shadow-lg border-border/60">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl">Acceso Profesional</CardTitle>
+                  <CardDescription>
+                    Inicia sesión o crea tu cuenta
                   </CardDescription>
                 </CardHeader>
                 
                 <Tabs defaultValue="login" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 mx-6 mb-6">
-                    <TabsTrigger value="login" className="flex items-center gap-2">
-                      <LogIn className="h-4 w-4" />
-                      Iniciar Sesión
-                    </TabsTrigger>
-                    <TabsTrigger value="register" className="flex items-center gap-2">
-                      <UserPlus className="h-4 w-4" />
-                      Registrarse
-                    </TabsTrigger>
-                  </TabsList>
+                  <div className="px-6">
+                    <TabsList className="grid w-full grid-cols-2 mb-4">
+                      <TabsTrigger value="login">Ingresar</TabsTrigger>
+                      <TabsTrigger value="register">Registrarse</TabsTrigger>
+                    </TabsList>
+                  </div>
                   
                   <TabsContent value="login">
                     <form onSubmit={handleLogin}>
-                      <CardContent className="space-y-4">
+                      <CardContent className="space-y-4 pt-0">
                         <div className="space-y-2">
-                          <Label htmlFor="email" className="text-sm font-medium">
-                            Correo Electrónico
-                          </Label>
+                          <Label htmlFor="email" className="text-sm">Email</Label>
                           <Input
                             id="email"
                             type="email"
@@ -185,30 +155,28 @@ const Auth = () => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
-                            className="h-11"
+                            className="h-10"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="password" className="text-sm font-medium">
-                            Contraseña
-                          </Label>
+                          <Label htmlFor="password" className="text-sm">Contraseña</Label>
                           <Input
                             id="password"
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
-                            className="h-11"
+                            className="h-10"
                           />
                         </div>
                       </CardContent>
-                      <CardFooter className="pt-2">
+                      <CardFooter>
                         <Button 
                           type="submit" 
-                          className="w-full h-11 bg-medical-600 hover:bg-medical-700" 
+                          className="w-full h-10" 
                           disabled={loading}
                         >
-                          {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+                          {loading ? "Ingresando..." : "Iniciar Sesión"}
                         </Button>
                       </CardFooter>
                     </form>
@@ -216,11 +184,9 @@ const Auth = () => {
                   
                   <TabsContent value="register">
                     <form onSubmit={handleRegister}>
-                      <CardContent className="space-y-4">
+                      <CardContent className="space-y-4 pt-0">
                         <div className="space-y-2">
-                          <Label htmlFor="register-email" className="text-sm font-medium">
-                            Correo Electrónico
-                          </Label>
+                          <Label htmlFor="register-email" className="text-sm">Email</Label>
                           <Input
                             id="register-email"
                             type="email"
@@ -228,30 +194,28 @@ const Auth = () => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
-                            className="h-11"
+                            className="h-10"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="register-password" className="text-sm font-medium">
-                            Contraseña
-                          </Label>
+                          <Label htmlFor="register-password" className="text-sm">Contraseña</Label>
                           <Input
                             id="register-password"
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
-                            className="h-11"
+                            className="h-10"
                           />
                           <p className="text-xs text-muted-foreground">
-                            La contraseña debe tener al menos 6 caracteres
+                            Mínimo 6 caracteres
                           </p>
                         </div>
                       </CardContent>
-                      <CardFooter className="pt-2">
+                      <CardFooter>
                         <Button 
                           type="submit" 
-                          className="w-full h-11 bg-medical-600 hover:bg-medical-700" 
+                          className="w-full h-10" 
                           disabled={loading}
                         >
                           {loading ? "Registrando..." : "Crear Cuenta"}

@@ -19,92 +19,68 @@ interface SectionCardProps {
 }
 
 const SectionCard = ({ 
-  title, 
-  icon, 
-  children, 
-  actions,
-  collapsible = false,
-  highlight = false,
-  isEmpty = false,
-  copyContent,
-  className = ""
+  title, icon, children, actions,
+  collapsible = false, highlight = false, isEmpty = false,
+  copyContent, className = ""
 }: SectionCardProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { toast } = useToast();
 
   const handleCopy = async () => {
     if (!copyContent) return;
-    
     const success = await copyToClipboard(copyContent);
     toast({
       title: success ? "Copiado" : "Error",
-      description: success ? `Sección "${title}" copiada al portapapeles` : "No se pudo copiar al portapapeles",
+      description: success ? `"${title}" copiado` : "No se pudo copiar",
       variant: success ? "default" : "destructive",
     });
   };
 
   return (
-    <Card 
+    <div 
       className={`
-        ${highlight ? 'ring-2 ring-blue-200 bg-blue-50/50 dark:bg-blue-950/20' : ''}
+        rounded-lg border bg-card overflow-hidden
+        ${highlight ? 'border-primary/30 bg-accent/30' : 'border-border'}
         ${className}
-        print:shadow-none print:border print:border-gray-300
+        print:shadow-none print:border print:border-border
       `}
       role="region"
       aria-labelledby={`section-${title.replace(/\s+/g, '-').toLowerCase()}`}
     >
-      <CardHeader className="pb-3">
-        <CardTitle 
-          id={`section-${title.replace(/\s+/g, '-').toLowerCase()}`}
-          className="flex items-center justify-between text-lg md:text-xl font-semibold"
-        >
-          <div className="flex items-center gap-2">
-            <div className="text-blue-600">{icon}</div>
-            <span>{title}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            {copyContent && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCopy}
-                className="h-8 w-8 p-0 print:hidden"
-                aria-label={`Copiar sección ${title}`}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            )}
-            {collapsible && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                className="h-8 w-8 p-0 print:hidden"
-                aria-label={isCollapsed ? "Expandir sección" : "Colapsar sección"}
-              >
-                {isCollapsed ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronUp className="h-4 w-4" />
-                )}
-              </Button>
-            )}
-            {actions}
-          </div>
-        </CardTitle>
-      </CardHeader>
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/50 bg-muted/20">
+        <div className="flex items-center gap-2">
+          <div className="text-primary">{icon}</div>
+          <span 
+            id={`section-${title.replace(/\s+/g, '-').toLowerCase()}`}
+            className="text-sm font-semibold text-foreground"
+          >
+            {title}
+          </span>
+        </div>
+        <div className="flex items-center gap-0.5">
+          {copyContent && (
+            <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 w-7 p-0 text-muted-foreground print:hidden">
+              <Copy className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {collapsible && (
+            <Button variant="ghost" size="sm" onClick={() => setIsCollapsed(!isCollapsed)} className="h-7 w-7 p-0 text-muted-foreground print:hidden">
+              {isCollapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+            </Button>
+          )}
+          {actions}
+        </div>
+      </div>
       {!isCollapsed && (
-        <CardContent className="pt-0 print:break-inside-avoid">
+        <div className="px-4 py-3 print:break-inside-avoid">
           {isEmpty ? (
-            <div className="text-sm text-muted-foreground text-center py-8">
-              Sin datos consignados
-            </div>
+            <div className="text-xs text-muted-foreground text-center py-6">Sin datos consignados</div>
           ) : (
             children
           )}
-        </CardContent>
+        </div>
       )}
-    </Card>
+    </div>
   );
 };
 
