@@ -1,65 +1,53 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { MicOff, User, LogOut, Stethoscope } from "lucide-react";
+import { LogOut, User, Activity } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const Header = () => {
   const { user, logout } = useAuth();
 
-  const handleLogout = async () => {
-    await logout();
-  };
-
   return (
-    <header className="sticky top-0 z-50 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="relative">
-              <div className="absolute inset-0 bg-medical-500/20 rounded-xl blur-sm group-hover:blur-md transition-all duration-300" />
-              <div className="relative bg-gradient-to-br from-medical-500 to-medical-600 p-2.5 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300">
-                <Stethoscope className="h-6 w-6 text-white" />
-              </div>
-            </div>
-            <div className="flex flex-col">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-medical-600 to-medical-800 bg-clip-text text-transparent">
-                ConsultSummary
-              </h1>
-              <span className="text-xs text-muted-foreground font-medium">
-                Medical Assistant
-              </span>
-            </div>
-          </Link>
-        </div>
+    <header className="sticky top-0 z-50 border-b border-border/60 bg-card/80 backdrop-blur-xl">
+      <div className="container flex h-14 items-center justify-between">
+        <Link to="/" className="flex items-center gap-2.5 group">
+          <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground shadow-sm">
+            <Activity className="h-4 w-4" strokeWidth={2.5} />
+          </div>
+          <span className="text-base font-bold tracking-tight text-foreground">
+            ConsultSummary
+          </span>
+        </Link>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           {user ? (
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex flex-col text-right">
+              <div className="hidden sm:flex items-center gap-2.5">
+                <Avatar className="h-7 w-7">
+                  <AvatarFallback className="bg-accent text-accent-foreground text-xs font-semibold">
+                    {user.email?.charAt(0).toUpperCase() || "D"}
+                  </AvatarFallback>
+                </Avatar>
                 <span className="text-sm font-medium text-foreground">
-                  Dr. Usuario
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {user.email}
+                  {user.email?.split('@')[0]}
                 </span>
               </div>
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={handleLogout}
-                className="gap-2 hover:bg-destructive/10 hover:text-destructive transition-colors"
+                onClick={() => logout()}
+                className="h-8 px-2.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
               >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Cerrar Sesión</span>
+                <LogOut className="h-3.5 w-3.5" />
               </Button>
             </div>
           ) : (
-            <Button variant="default" size="sm" asChild className="gap-2 bg-medical-600 hover:bg-medical-700">
+            <Button size="sm" asChild className="h-8 gap-1.5 bg-primary hover:bg-primary/90">
               <Link to="/auth">
-                <User className="h-4 w-4" />
-                Iniciar Sesión
+                <User className="h-3.5 w-3.5" />
+                Ingresar
               </Link>
             </Button>
           )}

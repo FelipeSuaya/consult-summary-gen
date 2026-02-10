@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConsultationRecord, Patient } from "@/types";
-import { Download, Clipboard, CheckCircle2, User, PencilLine, Save, X, AlertCircle, Stethoscope, HeartPulse, Activity, Tablet, FileText, ClipboardList, FilePlus2, Users, TestTube } from "lucide-react";
+import { Download, Clipboard, CheckCircle2, User, PencilLine, Save, X, Stethoscope, HeartPulse, Activity, Tablet, FileText, ClipboardList, FilePlus2, Users, TestTube, ArrowLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -13,6 +13,7 @@ import { updateConsultation } from "@/lib/storage";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import MedicalSoapCards from "@/components/soap/MedicalSoapCards";
 import { parseTextToSoapData } from "@/lib/utils";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface ConsultationDetailProps {
   consultation: ConsultationRecord;
@@ -77,20 +78,20 @@ const renderMarkdownTable = (markdownTable: string) => {
 
     if (isLabTable) {
       return (
-        <Table wrapperClassName="w-full overflow-x-auto border border-gray-200 rounded-md">
-          <TableHeader className="bg-medical-50">
-            <TableRow>
-              <TableHead className="font-medium text-medical-800">Estudio</TableHead>
-              <TableHead className="font-medium text-medical-800">Resultado</TableHead>
+        <Table>
+          <TableHeader>
+            <TableRow className="border-border">
+              <TableHead className="text-xs font-semibold text-muted-foreground">Estudio</TableHead>
+              <TableHead className="text-xs font-semibold text-muted-foreground">Resultado</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {dataRows.map((rowArr, idx) => {
               const { estudio, resultado } = getLabRowData(rowArr);
               return (
-                <TableRow key={`lab-row-${idx}`} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                  <TableCell>{estudio || "-"}</TableCell>
-                  <TableCell>{resultado || "-"}</TableCell>
+                <TableRow key={`lab-row-${idx}`} className="border-border/50">
+                  <TableCell className="text-sm">{estudio || "-"}</TableCell>
+                  <TableCell className="text-sm">{resultado || "-"}</TableCell>
                 </TableRow>
               );
             })}
@@ -100,27 +101,22 @@ const renderMarkdownTable = (markdownTable: string) => {
     }
 
     const headerRow = rows[0].trim();
-    const headers = headerRow
-      .split('|')
-      .map(cell => cell.trim())
-      .filter(cell => cell !== '');
-
-    const dataRowsGeneric = dataRows;
+    const headers = headerRow.split('|').map(cell => cell.trim()).filter(cell => cell !== '');
 
     return (
-      <Table wrapperClassName="w-full overflow-x-auto border border-gray-200 rounded-md">
-        <TableHeader className="bg-medical-50">
-          <TableRow>
+      <Table>
+        <TableHeader>
+          <TableRow className="border-border">
             {headers.map((header, i) => (
-              <TableHead key={`header-${i}`} className="font-medium text-medical-800">{header}</TableHead>
+              <TableHead key={`header-${i}`} className="text-xs font-semibold text-muted-foreground">{header}</TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {dataRowsGeneric.map((row, rowIndex) => (
-            <TableRow key={`row-${rowIndex}`} className={rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+          {dataRows.map((row, rowIndex) => (
+            <TableRow key={`row-${rowIndex}`} className="border-border/50">
               {row.map((cell, cellIndex) => (
-                <TableCell key={`cell-${rowIndex}-${cellIndex}`}>{cell}</TableCell>
+                <TableCell key={`cell-${rowIndex}-${cellIndex}`} className="text-sm">{cell}</TableCell>
               ))}
             </TableRow>
           ))}
@@ -137,16 +133,14 @@ const renderMedicalSection = (title: string, content: string | React.ReactNode, 
   if (!content) return null;
   
   return (
-    <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-100">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-medical-50 to-white">
-        <div className="p-1.5 rounded-full bg-medical-100 text-medical-600">
-          {icon}
-        </div>
-        <h3 className="font-semibold text-medical-800">{title}</h3>
+    <div className="mb-4 rounded-lg border border-border bg-card overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-muted/30">
+        <div className="text-primary">{icon}</div>
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       </div>
       <div className="px-4 py-3">
         {typeof content === 'string' ? (
-          <p className="text-gray-700">{content}</p>
+          <p className="text-sm text-foreground/80 leading-relaxed">{content}</p>
         ) : (
           content
         )}
@@ -179,44 +173,23 @@ const processTextWithTables = (text: string) => {
       switch (sectionTitle.toLowerCase().replace(/[áéíóúñ]/g, char => {
         return {á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u', ñ: 'n'}[char] || char;
       })) {
-        case "datos personales":
-          icon = <Users className="h-4 w-4" />;
-          break;
-        case "motivo de consulta":
-          icon = <AlertCircle className="h-4 w-4" />;
-          break;
-        case "antecedentes personales":
-          icon = <FileText className="h-4 w-4" />;
-          break;
-        case "antecedentes familiares":
-          icon = <Users className="h-4 w-4" />;
-          break;
-        case "habitos":
-          icon = <Activity className="h-4 w-4" />;
-          break;
-        case "examenes complementarios previos":
-          icon = <ClipboardList className="h-4 w-4" />;
-          break;
-        case "diagnostico presuntivo":
-          icon = <Stethoscope className="h-4 w-4" />;
-          break;
-        case "indicaciones":
-          icon = <Tablet className="h-4 w-4" />;
-          break;
-        case "examenes solicitados":
-          icon = <FilePlus2 className="h-4 w-4" />;
-          break;
-        case "laboratorio":
-          icon = <TestTube className="h-4 w-4" />;
-          break;
-        default:
-          icon = <FileText className="h-4 w-4" />;
+        case "datos personales": icon = <Users className="h-4 w-4" />; break;
+        case "motivo de consulta": icon = <Activity className="h-4 w-4" />; break;
+        case "antecedentes personales": icon = <FileText className="h-4 w-4" />; break;
+        case "antecedentes familiares": icon = <Users className="h-4 w-4" />; break;
+        case "habitos": icon = <Activity className="h-4 w-4" />; break;
+        case "examenes complementarios previos": icon = <ClipboardList className="h-4 w-4" />; break;
+        case "diagnostico presuntivo": icon = <Stethoscope className="h-4 w-4" />; break;
+        case "indicaciones": icon = <Tablet className="h-4 w-4" />; break;
+        case "examenes solicitados": icon = <FilePlus2 className="h-4 w-4" />; break;
+        case "laboratorio": icon = <TestTube className="h-4 w-4" />; break;
+        default: icon = <FileText className="h-4 w-4" />;
       }
       
       const processedContent = processTextContent(sectionContent);
       
       result.push(
-        <div key={`section-${i}`} className="mb-4">
+        <div key={`section-${i}`}>
           {renderMedicalSection(sectionTitle, processedContent, icon)}
         </div>
       );
@@ -246,8 +219,8 @@ const processTextContent = (content: string) => {
       const subcontent = parts[i + 1].trim();
       
       result.push(
-        <div key={`subsection-${i}`} className="mt-3 mb-2">
-          <h4 className="font-medium text-medical-700 mb-1">{subtitle}:</h4>
+        <div key={`subsection-${i}`} className="mt-2 mb-1">
+          <h4 className="text-sm font-medium text-foreground mb-1">{subtitle}:</h4>
           {processTextParts(subcontent)}
         </div>
       );
@@ -264,19 +237,19 @@ const processTextParts = (text: string) => {
     if (segment.includes('|') && segment.split('\n').filter(line => line.includes('|')).length >= 2) {
       if (segment.toLowerCase().includes("laboratorio")) {
         return (
-          <div key={`lab-${index}`} className="my-3">
-            <div className="flex items-center gap-2 mb-2">
-              <TestTube className="h-4 w-4 text-amber-500" />
-              <h4 className="font-medium text-amber-700">Laboratorio:</h4>
+          <div key={`lab-${index}`} className="my-2">
+            <div className="flex items-center gap-2 mb-1.5">
+              <TestTube className="h-3.5 w-3.5 text-primary" />
+              <h4 className="text-sm font-medium text-foreground">Laboratorio:</h4>
             </div>
-            <div className="w-full overflow-x-auto rounded-md">
+            <div className="w-full overflow-x-auto rounded-md border border-border">
               {renderMarkdownTable(segment.replace(/laboratorio:?\s*/i, ''))}
             </div>
           </div>
         );
       }
       return (
-        <div key={`table-${index}`} className="w-full overflow-x-auto rounded-md">
+        <div key={`table-${index}`} className="w-full overflow-x-auto rounded-md border border-border">
           {renderMarkdownTable(segment)}
         </div>
       );
@@ -294,13 +267,13 @@ const processTextParts = (text: string) => {
         });
       
       return (
-        <ul key={`list-${index}`} className="list-disc list-inside my-2 text-gray-700">
+        <ul key={`list-${index}`} className="list-disc list-inside my-1.5 text-sm text-foreground/80">
           {listItems}
         </ul>
       );
     }
     
-    return <p key={`section-${index}`} className="py-1 text-gray-700">{segment}</p>;
+    return <p key={`section-${index}`} className="py-0.5 text-sm text-foreground/80 leading-relaxed">{segment}</p>;
   });
 };
 
@@ -316,12 +289,9 @@ const ConsultationDetail = ({ consultation, onBack }: ConsultationDetailProps) =
     const loadPatient = async () => {
       if (consultation.patientId) {
         const patientData = await getPatientById(consultation.patientId);
-        if (patientData) {
-          setPatient(patientData);
-        }
+        if (patientData) setPatient(patientData);
       }
     };
-    
     loadPatient();
   }, [consultation.patientId]);
 
@@ -334,20 +304,10 @@ const ConsultationDetail = ({ consultation, onBack }: ConsultationDetailProps) =
     try {
       await navigator.clipboard.writeText(text);
       setCopied(type);
-      
-      toast({
-        title: "Copiado al portapapeles",
-        description: `El ${type === 'transcription' ? 'transcripción' : 'resumen'} ha sido copiado al portapapeles`,
-      });
-      
+      toast({ title: "Copiado al portapapeles" });
       setTimeout(() => setCopied(null), 2000);
     } catch (error) {
-      console.error("Error al copiar:", error);
-      toast({
-        title: "Error al copiar",
-        description: "No se pudo copiar al portapapeles",
-        variant: "destructive",
-      });
+      toast({ title: "Error al copiar", variant: "destructive" });
     }
   };
   
@@ -364,52 +324,24 @@ const ConsultationDetail = ({ consultation, onBack }: ConsultationDetailProps) =
 
   const handleSaveSummary = async () => {
     if (!editedSummary.trim()) {
-      toast({
-        title: "Error",
-        description: "El resumen no puede estar vacío",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "El resumen no puede estar vacío", variant: "destructive" });
       return;
     }
-
     setIsSaving(true);
-
     try {
-      const updatedConsultation: ConsultationRecord = {
-        ...consultation,
-        summary: editedSummary
-      };
-
+      const updatedConsultation: ConsultationRecord = { ...consultation, summary: editedSummary };
       const error = await updateConsultation(updatedConsultation);
-      
-      if (error) {
-        throw new Error(error);
-      }
-
+      if (error) throw new Error(error);
       consultation.summary = editedSummary;
       setEditMode(null);
-      
-      toast({
-        title: "Resumen actualizado",
-        description: "El resumen ha sido actualizado correctamente",
-      });
+      toast({ title: "Resumen actualizado" });
     } catch (error) {
-      console.error("Error al guardar el resumen:", error);
-      toast({
-        title: "Error al guardar",
-        description: "No se pudo actualizar el resumen",
-        variant: "destructive",
-      });
+      toast({ title: "Error al guardar", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleCancelEdit = () => {
-    setEditedSummary(consultation.summary || "");
-    setEditMode(null);
-  };
-  
   const patientData = patient || {
     id: consultation.patientId || '',
     name: consultation.patientName,
@@ -420,210 +352,132 @@ const ConsultationDetail = ({ consultation, onBack }: ConsultationDetailProps) =
   };
   
   return (
-    <div className="space-y-4">
-      <Button variant="ghost" onClick={onBack} className="mb-2 hover:bg-medical-50">
-        ← Volver a todas las consultas
+    <div className="space-y-4 max-w-4xl mx-auto">
+      {/* Back button */}
+      <Button variant="ghost" onClick={onBack} size="sm" className="gap-1.5 -ml-2 text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Volver
       </Button>
       
-      <Card className="mb-6 overflow-hidden border-medical-100">
-        <CardHeader className="bg-gradient-to-r from-medical-50 to-white border-b border-medical-100">
-          <CardTitle className="text-xl text-medical-800 flex items-center gap-2">
-            <User className="h-5 w-5 text-medical-500" />
-            {consultation.patientName}
-          </CardTitle>
-          <CardDescription>
-            Consulta el {format(new Date(consultation.dateTime), 'PPP', { locale: es })} a las {format(new Date(consultation.dateTime), 'p')}
-          </CardDescription>
-        </CardHeader>
-        
-        <CardContent className="pt-4">
-          <div className="flex flex-col gap-2 rounded-md bg-medical-50/50 p-4 text-sm">
-            <div className="flex items-center gap-2 text-slate-600">
-              <User className="h-4 w-4 text-medical-600" />
-              <span className="font-medium">Datos Personales:</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* Patient Header Card */}
+      <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+        <div className="flex items-start gap-4">
+          <Avatar className="h-12 w-12">
+            <AvatarFallback className="bg-accent text-accent-foreground font-semibold">
+              {consultation.patientName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-bold text-foreground">{consultation.patientName}</h2>
+            <p className="text-sm text-muted-foreground">
+              {format(new Date(consultation.dateTime), "EEEE d 'de' MMMM, yyyy · HH:mm", { locale: es })}
+            </p>
+            
+            {/* Patient details chips */}
+            <div className="flex flex-wrap gap-1.5 mt-2">
               {patientData.dni && (
-                <div className="flex items-center gap-2 bg-white p-2 rounded-md shadow-sm">
-                  <span className="font-medium text-medical-700">DNI:</span>
-                  <span className="text-gray-700">{patientData.dni}</span>
-                </div>
-              )}
-              {patientData.phone && (
-                <div className="flex items-center gap-2 bg-white p-2 rounded-md shadow-sm">
-                  <span className="font-medium text-medical-700">Teléfono:</span>
-                  <span className="text-gray-700">{patientData.phone}</span>
-                </div>
+                <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">DNI: {patientData.dni}</span>
               )}
               {patientData.age && (
-                <div className="flex items-center gap-2 bg-white p-2 rounded-md shadow-sm">
-                  <span className="font-medium text-medical-700">Edad:</span>
-                  <span className="text-gray-700">{patientData.age}</span>
-                </div>
+                <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">{patientData.age} años</span>
               )}
-              {patientData.email && (
-                <div className="flex items-center gap-2 bg-white p-2 rounded-md shadow-sm">
-                  <span className="font-medium text-medical-700">Email:</span>
-                  <span className="text-gray-700">{patientData.email}</span>
-                </div>
-              )}
-              {patient?.notes && (
-                <div className="col-span-2 flex items-start gap-2 bg-white p-2 rounded-md shadow-sm">
-                  <span className="font-medium text-medical-700">Notas:</span>
-                  <span className="text-gray-700">{patient.notes}</span>
-                </div>
+              {patientData.phone && (
+                <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">{patientData.phone}</span>
               )}
             </div>
           </div>
-        </CardContent>
+        </div>
         
+        {/* Audio player */}
         {consultation.audioUrl && (
-          <CardContent>
-            <div className="my-2 bg-gray-50 p-3 rounded-md border border-gray-100">
-              <div className="flex items-center gap-2 mb-2">
-                <HeartPulse className="h-4 w-4 text-medical-600" />
-                <h4 className="font-medium text-medical-700">Audio de la consulta:</h4>
-              </div>
-              <audio controls className="w-full">
+          <div className="mt-4 pt-4 border-t border-border/50">
+            <div className="flex items-center gap-3">
+              <audio controls className="flex-1 h-8" style={{ minWidth: 0 }}>
                 <source src={consultation.audioUrl} type="audio/webm" />
-                Su navegador no soporta el elemento de audio.
               </audio>
+              <Button variant="ghost" size="sm" onClick={downloadAudio} className="shrink-0 h-8 px-2.5 text-muted-foreground">
+                <Download className="h-3.5 w-3.5" />
+              </Button>
             </div>
-            <Button variant="outline" onClick={downloadAudio} className="mt-2 border-medical-200 hover:bg-medical-50">
-              <Download className="mr-2 h-4 w-4 text-medical-600" />
-              Descargar Audio
-            </Button>
-          </CardContent>
+          </div>
         )}
-      </Card>
+      </div>
       
+      {/* Content Tabs */}
       <Tabs defaultValue="summary" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-medical-50 rounded-full p-1 border border-medical-100">
+        <TabsList className="w-full grid grid-cols-2 bg-muted/60 border border-border/50 p-1 h-auto">
           <TabsTrigger 
             value="summary" 
-            className="data-[state=active]:bg-medical-600 data-[state=active]:text-white text-medical-700 rounded-full transition-all duration-300"
+            className="text-sm py-2 data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-md"
           >
             Resumen
           </TabsTrigger>
           <TabsTrigger 
             value="transcription"
-            className="data-[state=active]:bg-medical-600 data-[state=active]:text-white text-medical-700 rounded-full transition-all duration-300"
+            className="text-sm py-2 data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-md"
           >
-            Transcripción Completa
+            Transcripción
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="summary">
-          <Card>
-            <CardHeader className="bg-gradient-to-r from-medical-50 to-white border-b border-medical-100">
-              <CardTitle className="text-lg text-medical-800 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-medical-600" />
-                  <span>Resumen de la Consulta</span>
-                </div>
-                <div className="flex gap-2">
-                  {editMode === 'summary' ? (
-                    <>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={handleCancelEdit}
-                        disabled={isSaving}
-                        className="border-red-200 hover:bg-red-50 text-red-600"
-                      >
-                        <X className="h-4 w-4 mr-1" />
-                        Cancelar
-                      </Button>
-                      <Button 
-                        variant="default" 
-                        size="sm"
-                        onClick={handleSaveSummary}
-                        disabled={isSaving}
-                        className="bg-medical-600 hover:bg-medical-700"
-                      >
-                        <Save className="h-4 w-4 mr-1" />
-                        {isSaving ? "Guardando..." : "Guardar"}
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => consultation.summary && copyToClipboard(consultation.summary, 'summary')}
-                        className="hover:bg-medical-50"
-                      >
-                        {copied === 'summary' ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Clipboard className="h-4 w-4 text-medical-600" />
-                        )}
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => setEditMode('summary')}
-                        className="hover:bg-medical-50"
-                      >
-                        <PencilLine className="h-4 w-4 text-medical-600" />
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="prose max-w-none">
+        <TabsContent value="summary" className="mt-4">
+          <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/20">
+              <span className="text-sm font-semibold text-foreground">Resumen Clínico</span>
+              <div className="flex gap-1">
                 {editMode === 'summary' ? (
-                  <Textarea
-                    value={editedSummary}
-                    onChange={(e) => setEditedSummary(e.target.value)}
-                    className="min-h-[200px] font-mono text-sm"
-                    placeholder="Edite el resumen aquí..."
-                  />
+                  <>
+                    <Button variant="ghost" size="sm" onClick={() => { setEditedSummary(consultation.summary || ""); setEditMode(null); }} disabled={isSaving} className="h-7 px-2 text-xs text-muted-foreground">
+                      <X className="h-3 w-3 mr-1" /> Cancelar
+                    </Button>
+                    <Button size="sm" onClick={handleSaveSummary} disabled={isSaving} className="h-7 px-2.5 text-xs">
+                      <Save className="h-3 w-3 mr-1" /> {isSaving ? "..." : "Guardar"}
+                    </Button>
+                  </>
                 ) : (
-                  <div className="bg-white rounded-lg">
-                    <MedicalSoapCards 
-                      soapData={parseTextToSoapData(consultation.summary || "", consultation.patientName)}
-                      className="space-y-4"
-                    />
-                  </div>
+                  <>
+                    <Button variant="ghost" size="sm" onClick={() => consultation.summary && copyToClipboard(consultation.summary, 'summary')} className="h-7 px-2 text-muted-foreground">
+                      {copied === 'summary' ? <CheckCircle2 className="h-3.5 w-3.5 text-primary" /> : <Clipboard className="h-3.5 w-3.5" />}
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setEditMode('summary')} className="h-7 px-2 text-muted-foreground">
+                      <PencilLine className="h-3.5 w-3.5" />
+                    </Button>
+                  </>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="p-5">
+              {editMode === 'summary' ? (
+                <Textarea
+                  value={editedSummary}
+                  onChange={(e) => setEditedSummary(e.target.value)}
+                  className="min-h-[200px] font-mono text-sm"
+                  placeholder="Edite el resumen aquí..."
+                />
+              ) : (
+                <MedicalSoapCards 
+                  soapData={parseTextToSoapData(consultation.summary || "", consultation.patientName)}
+                  className="space-y-4"
+                />
+              )}
+            </div>
+          </div>
         </TabsContent>
         
-        <TabsContent value="transcription">
-          <Card>
-            <CardHeader className="bg-gradient-to-r from-medical-50 to-white border-b border-medical-100">
-              <CardTitle className="text-lg text-medical-800 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-medical-600" />
-                  <span>Transcripción Completa</span>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => consultation.transcription && copyToClipboard(consultation.transcription, 'transcription')}
-                  className="hover:bg-medical-50"
-                >
-                  {copied === 'transcription' ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <Clipboard className="h-4 w-4 text-medical-600" />
-                  )}
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="prose max-w-none">
-                <div className="bg-gray-50 p-4 rounded-md border border-gray-100 whitespace-pre-line text-gray-700">
-                  {consultation.transcription || "No hay transcripción disponible"}
-                </div>
+        <TabsContent value="transcription" className="mt-4">
+          <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/20">
+              <span className="text-sm font-semibold text-foreground">Transcripción Completa</span>
+              <Button variant="ghost" size="sm" onClick={() => consultation.transcription && copyToClipboard(consultation.transcription, 'transcription')} className="h-7 px-2 text-muted-foreground">
+                {copied === 'transcription' ? <CheckCircle2 className="h-3.5 w-3.5 text-primary" /> : <Clipboard className="h-3.5 w-3.5" />}
+              </Button>
+            </div>
+            <div className="p-5">
+              <div className="bg-muted/30 p-4 rounded-lg text-sm text-foreground/80 whitespace-pre-line leading-relaxed">
+                {consultation.transcription || "No hay transcripción disponible"}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
