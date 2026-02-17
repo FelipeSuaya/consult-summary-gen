@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ConsultationRecord } from "@/types";
-import { useQuery } from "@tanstack/react-query";
-import { getConsultationsByPatient } from "@/lib/storage";
+import { useConsultationsByPatient } from '@/modules/consultations/hooks/use-consultation-queries';
+import { useUpdateConsultation } from '@/modules/consultations/hooks/use-consultation-mutations';
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { updateConsultation } from "@/lib/storage";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import React from "react";
 import MedicalSoapCards from "@/components/soap/MedicalSoapCards";
@@ -253,31 +252,15 @@ const PatientConsultations = ({
   const [isSaving, setIsSaving] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showFullscreenModal, setShowFullscreenModal] = useState(false);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+  const updateConsultationMutation = useUpdateConsultation();
 
-  console.log("PatientConsultations - Patient ID:", patientId);
   const {
     data: consultations = [],
     isLoading,
     error,
     refetch
-  } = useQuery({
-    queryKey: ['consultations', patientId],
-    queryFn: () => getConsultationsByPatient(patientId),
-    enabled: !!patientId
-  });
-
-  useEffect(() => {
-    if (patientId) {
-      refetch();
-    }
-  }, [patientId, refetch]);
-
-  useEffect(() => {
-    console.log("Consultations fetched:", consultations);
-  }, [consultations]);
+  } = useConsultationsByPatient(patientId);
 
   const handleEditSummary = (consultation: ConsultationRecord) => {
     setEditedSummary(consultation.summary || "");
@@ -297,20 +280,7 @@ const PatientConsultations = ({
     }
     setIsSaving(true);
     try {
-      const updatedConsultation: ConsultationRecord = {
-        ...consultation,
-        summary: editedSummary
-      };
-
-      const error = await updateConsultation(updatedConsultation);
-      if (error) {
-        throw new Error(error);
-      }
-
-      const updatedConsultations = consultations.map(c => c.id === consultation.id ? {
-        ...c,
-        summary: editedSummary
-      } : c);
+      await updateConsultationMutation.mutateAsync({ id: consultation.id, data: { summary: editedSummary } });
 
       refetch();
       setEditMode(null);

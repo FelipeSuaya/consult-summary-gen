@@ -1,11 +1,10 @@
 import { SoapData } from "@/types/soap";
-import { Card } from "@/components/ui/card";
 import LabTable from "@/components/soap/LabTable";
-import { 
-  MessageSquare, 
-  Stethoscope, 
-  Brain, 
-  ClipboardList, 
+import {
+  MessageSquare,
+  Stethoscope,
+  Brain,
+  ClipboardList,
   TestTube,
   AlertTriangle,
   FileText,
@@ -17,316 +16,186 @@ interface MedicalSoapCardsProps {
   className?: string;
 }
 
+const SECTION_STYLES = {
+  subjective: { border: "border-l-blue-500", icon: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/20" },
+  objective: { border: "border-l-emerald-500", icon: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/20" },
+  assessment: { border: "border-l-amber-500", icon: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/20" },
+  plan: { border: "border-l-teal-500", icon: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950/20" },
+  diagnosis: { border: "border-l-purple-500", icon: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950/20" },
+  lab: { border: "border-l-slate-500", icon: "text-slate-600", bg: "bg-slate-50 dark:bg-slate-950/20" },
+} as const;
+
+function SectionCard({
+  style,
+  icon,
+  label,
+  children,
+}: {
+  style: (typeof SECTION_STYLES)[keyof typeof SECTION_STYLES];
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`border-l-[3px] ${style.border} rounded-r-lg border border-l-[3px] border-border bg-card`}>
+      <div className={`flex items-center gap-1.5 px-3 py-1.5 border-b border-border/60 ${style.bg}`}>
+        <span className={style.icon}>{icon}</span>
+        <span className="text-xs font-semibold tracking-wide uppercase text-foreground/70">{label}</span>
+      </div>
+      <div className="px-3 py-2">{children}</div>
+    </div>
+  );
+}
+
+function ContentText({ text }: { text: string }) {
+  if (!text) return null;
+
+  const lines = text.split('\n').filter(Boolean);
+  const hasBullets = lines.some(l => /^[\-•\*]\s/.test(l.trim()));
+
+  if (hasBullets) {
+    return (
+      <ul className="space-y-0.5">
+        {lines.map((line, i) => {
+          const bullet = line.trim().match(/^[\-•\*]\s+(.*)/);
+          if (bullet) {
+            return (
+              <li key={i} className="text-sm text-foreground/80 leading-snug flex gap-1.5">
+                <span className="text-muted-foreground/50 select-none shrink-0">&#8226;</span>
+                <span>{bullet[1]}</span>
+              </li>
+            );
+          }
+          return <p key={i} className="text-sm text-foreground/80 leading-snug">{line}</p>;
+        })}
+      </ul>
+    );
+  }
+
+  return <p className="text-sm text-foreground/80 leading-snug whitespace-pre-line">{text}</p>;
+}
+
+function EmptyState({ text }: { text: string }) {
+  return <p className="text-xs text-muted-foreground/60 italic">{text}</p>;
+}
+
 const MedicalSoapCards = ({ soapData, className = "" }: MedicalSoapCardsProps) => {
-  // Helper function to create gradient backgrounds
-  const getCardStyles = (color: string) => {
-    const styles = {
-      blue: "bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-blue-100/50",
-      green: "bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-emerald-100/50", 
-      amber: "bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 shadow-amber-100/50",
-      teal: "bg-gradient-to-br from-teal-50 to-teal-100 border-teal-200 shadow-teal-100/50",
-      purple: "bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-purple-100/50",
-      slate: "bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 shadow-slate-100/50"
-    };
-    return styles[color as keyof typeof styles];
-  };
-
-  const renderSubjectiveCard = () => {
-    const { subjective } = soapData;
-    const content = subjective?.chiefComplaint || subjective?.hpi;
-    
-    return (
-      <Card className={`${getCardStyles('blue')} border-2 rounded-3xl p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]`}>
-        <div className="space-y-6">
-          {/* Header with icon */}
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-blue-500 flex items-center justify-center shadow-lg">
-              <MessageSquare className="h-8 w-8 text-white" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-blue-900">Subjetivo</h3>
-              <p className="text-blue-700 font-medium">Motivo de consulta</p>
-            </div>
-          </div>
-          
-          {/* Content */}
-          <div className="space-y-4">
-            {content ? (
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-blue-200/50">
-                <p className="text-blue-900 leading-relaxed font-medium text-lg">
-                  {content}
-                </p>
-              </div>
-            ) : (
-              <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 border border-blue-200/50 text-center">
-                <p className="text-blue-600 italic text-lg">Sin datos subjetivos registrados</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </Card>
-    );
-  };
-
-  const renderObjectiveCard = () => {
-    const { objective } = soapData;
-    const content = objective?.physicalExam || objective?.studiesNarrative;
-    const hasVitals = objective?.vitals && objective.vitals.length > 0;
-    
-    return (
-      <Card className={`${getCardStyles('green')} border-2 rounded-3xl p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]`}>
-        <div className="space-y-6">
-          {/* Header with icon */}
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg">
-              <Stethoscope className="h-8 w-8 text-white" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-emerald-900">Objetivo</h3>
-              <p className="text-emerald-700 font-medium">Hallazgos clínicos</p>
-            </div>
-          </div>
-          
-          {/* Content */}
-          <div className="space-y-4">
-            {hasVitals && (
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-emerald-200/50">
-                <h4 className="text-emerald-800 font-bold mb-3 flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  Signos Vitales
-                </h4>
-                <div className="grid grid-cols-2 gap-3">
-                  {objective.vitals.map((vital, index) => (
-                    <div
-                      key={index}
-                      className={`px-4 py-2 rounded-xl text-sm font-semibold text-center ${
-                        vital.flagged 
-                          ? 'bg-red-100 text-red-800 border border-red-200' 
-                          : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                      }`}
-                    >
-                      {vital.label}: {vital.value}{vital.unit ? ` ${vital.unit}` : ''}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {content ? (
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-emerald-200/50">
-                <p className="text-emerald-900 leading-relaxed font-medium text-lg">
-                  {content}
-                </p>
-              </div>
-            ) : !hasVitals ? (
-              <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 border border-emerald-200/50 text-center">
-                <p className="text-emerald-600 italic text-lg">Sin datos objetivos registrados</p>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </Card>
-    );
-  };
-
-  const renderAssessmentCard = () => {
-    const { assessment } = soapData;
-    const content = assessment?.impression;
-    
-    return (
-      <Card className={`${getCardStyles('amber')} border-2 rounded-3xl p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]`}>
-        <div className="space-y-6">
-          {/* Header with icon */}
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-amber-500 flex items-center justify-center shadow-lg">
-              <Brain className="h-8 w-8 text-white" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-amber-900">Evaluación</h3>
-              <p className="text-amber-700 font-medium">Análisis clínico</p>
-            </div>
-          </div>
-          
-          {/* Content */}
-          <div className="space-y-4">
-            {content ? (
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-amber-200/50">
-                <p className="text-amber-900 leading-relaxed font-medium text-lg">
-                  {content}
-                </p>
-              </div>
-            ) : (
-              <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 border border-amber-200/50 text-center">
-                <p className="text-amber-600 italic text-lg">Sin evaluación registrada</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </Card>
-    );
-  };
-
-  const renderPlanCard = () => {
-    const { plan } = soapData;
-    const content = plan?.treatment;
-    
-    return (
-      <Card className={`${getCardStyles('teal')} border-2 rounded-3xl p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]`}>
-        <div className="space-y-6">
-          {/* Header with icon */}
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-teal-500 flex items-center justify-center shadow-lg">
-              <ClipboardList className="h-8 w-8 text-white" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-teal-900">Plan</h3>
-              <p className="text-teal-700 font-medium">Tratamiento y seguimiento</p>
-            </div>
-          </div>
-          
-          {/* Content */}
-          <div className="space-y-4">
-            {content ? (
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-teal-200/50">
-                <p className="text-teal-900 leading-relaxed font-medium text-lg">
-                  {content}
-                </p>
-              </div>
-            ) : (
-              <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 border border-teal-200/50 text-center">
-                <p className="text-teal-600 italic text-lg">Sin plan de tratamiento registrado</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </Card>
-    );
-  };
-
-  const renderDiagnosisCard = () => {
-    const diagnosis = soapData.diagnosticoPresuntivo || soapData.aiPresumptiveDx;
-    if (!diagnosis) return null;
-
-    return (
-      <Card className={`${getCardStyles('purple')} border-2 rounded-3xl p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]`}>
-        <div className="space-y-6">
-          {/* Header with icon */}
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-purple-500 flex items-center justify-center shadow-lg">
-              <FileText className="h-8 w-8 text-white" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-purple-900">Diagnóstico Presuntivo</h3>
-              <p className="text-purple-700 font-medium">Impresión diagnóstica</p>
-            </div>
-          </div>
-          
-          {/* Content */}
-          <div className="space-y-4">
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-purple-200/50">
-              <p className="text-purple-900 leading-relaxed font-medium text-lg">
-                {diagnosis}
-              </p>
-            </div>
-          </div>
-        </div>
-      </Card>
-    );
-  };
-
-  const renderLabCard = () => {
-    const { laboratorio } = soapData;
-    const labs = soapData.objective?.labs;
-    
-    if (!laboratorio && !labs?.length) return null;
-
-    return (
-      <Card className={`${getCardStyles('slate')} border-2 rounded-3xl p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]`}>
-        <div className="space-y-6">
-          {/* Header with icon */}
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-slate-500 flex items-center justify-center shadow-lg">
-              <TestTube className="h-8 w-8 text-white" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-slate-900">Laboratorio</h3>
-              <p className="text-slate-700 font-medium">Estudios complementarios</p>
-            </div>
-          </div>
-          
-          {/* Content */}
-          <div className="space-y-4">
-            {labs?.length ? (
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-slate-200/50">
-                <LabTable labs={labs} />
-              </div>
-            ) : laboratorio ? (
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-slate-200/50">
-                <p className="text-slate-900 leading-relaxed font-medium text-lg">{laboratorio}</p>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </Card>
-    );
-  };
+  const subjectiveContent = soapData.subjective?.chiefComplaint || soapData.subjective?.hpi;
+  const objectiveContent = soapData.objective?.physicalExam || soapData.objective?.studiesNarrative;
+  const hasVitals = soapData.objective?.vitals && soapData.objective.vitals.length > 0;
+  const assessmentContent = soapData.assessment?.impression;
+  const planContent = soapData.plan?.treatment;
+  const diagnosis = soapData.diagnosticoPresuntivo || soapData.aiPresumptiveDx;
+  const labs = soapData.objective?.labs;
+  const hasLab = !!(soapData.laboratorio || labs?.length);
 
   return (
-    <div className={`max-w-7xl mx-auto p-8 space-y-10 ${className}`}>
-      {/* Header */}
-      <div className="text-center space-y-4 mb-12">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          Resumen Clínico – Formato SOAP
-        </h1>
-        <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-200/50 max-w-2xl mx-auto">
-          <p className="text-gray-700 text-lg font-medium">
-            {soapData.meta?.patientName && (
-              <span className="text-blue-700 font-bold">{soapData.meta.patientName}</span>
-            )}
-            {soapData.meta?.dateTime && (
-              <>
-                {soapData.meta.patientName && " • "}
-                <span className="text-gray-600">{new Date(soapData.meta.dateTime).toLocaleDateString('es-ES', {
-                  year: 'numeric',
-                  month: 'long', 
-                  day: 'numeric'
-                })}</span>
-              </>
-            )}
-          </p>
-          {soapData.subjective?.chiefComplaint && (
-            <p className="text-gray-600 mt-2 text-base">
-              {soapData.subjective.chiefComplaint.length > 80 
-                ? `${soapData.subjective.chiefComplaint.slice(0, 80)}...` 
-                : soapData.subjective.chiefComplaint}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Alerts if any */}
+    <div className={className}>
+      {/* Alerts — compact banner */}
       {soapData.alerts && soapData.alerts.length > 0 && (
-        <div className="flex flex-wrap gap-4 justify-center mb-8">
-          {soapData.alerts.map((alert, index) => (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {soapData.alerts.map((alert, i) => (
             <div
-              key={index}
-              className="flex items-center gap-3 px-6 py-3 bg-red-50 border-2 border-red-200 rounded-2xl shadow-lg"
+              key={i}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800"
             >
-              <AlertTriangle className="h-6 w-6 text-red-500" />
-              <span className="text-base font-semibold text-red-800">{alert.message}</span>
+              <AlertTriangle className="h-3 w-3 shrink-0" />
+              {alert.message}
             </div>
           ))}
         </div>
       )}
 
-      {/* SOAP Cards - Vertical Layout */}
-      <div className="space-y-8">
-        {renderSubjectiveCard()}
-        {renderObjectiveCard()}
-        {renderAssessmentCard()}
-        {renderPlanCard()}
-        {renderDiagnosisCard()}
-        {renderLabCard()}
+      {/* Main SOAP grid: 2 columns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* S — Subjetivo */}
+        <SectionCard
+          style={SECTION_STYLES.subjective}
+          icon={<MessageSquare className="h-3.5 w-3.5" />}
+          label="Subjetivo"
+        >
+          {subjectiveContent
+            ? <ContentText text={subjectiveContent} />
+            : <EmptyState text="Sin datos subjetivos" />}
+        </SectionCard>
+
+        {/* O — Objetivo */}
+        <SectionCard
+          style={SECTION_STYLES.objective}
+          icon={<Stethoscope className="h-3.5 w-3.5" />}
+          label="Objetivo"
+        >
+          <div className="space-y-2">
+            {hasVitals && (
+              <div className="flex flex-wrap gap-1.5">
+                {soapData.objective!.vitals!.map((vital, i) => (
+                  <span
+                    key={i}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+                      vital.flagged
+                        ? 'bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400'
+                        : 'bg-muted text-foreground/70'
+                    }`}
+                  >
+                    {vital.flagged && <Activity className="h-2.5 w-2.5" />}
+                    {vital.label} {vital.value}{vital.unit ? ` ${vital.unit}` : ''}
+                  </span>
+                ))}
+              </div>
+            )}
+            {objectiveContent
+              ? <ContentText text={objectiveContent} />
+              : !hasVitals && <EmptyState text="Sin datos objetivos" />}
+          </div>
+        </SectionCard>
+
+        {/* A — Evaluación */}
+        <SectionCard
+          style={SECTION_STYLES.assessment}
+          icon={<Brain className="h-3.5 w-3.5" />}
+          label="Evaluación"
+        >
+          {assessmentContent
+            ? <ContentText text={assessmentContent} />
+            : <EmptyState text="Sin evaluación" />}
+        </SectionCard>
+
+        {/* P — Plan */}
+        <SectionCard
+          style={SECTION_STYLES.plan}
+          icon={<ClipboardList className="h-3.5 w-3.5" />}
+          label="Plan"
+        >
+          {planContent
+            ? <ContentText text={planContent} />
+            : <EmptyState text="Sin plan de tratamiento" />}
+        </SectionCard>
+
+        {/* Dx — Diagnóstico Presuntivo */}
+        {diagnosis && (
+          <SectionCard
+            style={SECTION_STYLES.diagnosis}
+            icon={<FileText className="h-3.5 w-3.5" />}
+            label="Diagnóstico Presuntivo"
+          >
+            <ContentText text={diagnosis} />
+          </SectionCard>
+        )}
+
+        {/* Lab — Laboratorio */}
+        {hasLab && (
+          <SectionCard
+            style={SECTION_STYLES.lab}
+            icon={<TestTube className="h-3.5 w-3.5" />}
+            label="Laboratorio"
+          >
+            {labs?.length ? (
+              <LabTable labs={labs} />
+            ) : (
+              <ContentText text={soapData.laboratorio!} />
+            )}
+          </SectionCard>
+        )}
       </div>
     </div>
   );

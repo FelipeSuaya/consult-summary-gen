@@ -3,10 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Bot, User, Settings, Trash2, Send, Loader2, Database, AlertCircle, BarChart3 } from "lucide-react";
-import { sendMedicalAnalyticsQuery } from "@/lib/medicalAnalytics";
+import { Bot, User, Trash2, Send, Loader2, Database, AlertCircle, BarChart3 } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
 
 interface MedicalAnalyticsChatProps {
@@ -49,15 +47,9 @@ const MedicalAnalyticsChat = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [webhookUrl, setWebhookUrl] = useState(
-    localStorage.getItem('n8n_webhook_url') || "https://n8nwebhook.botec.tech/webhook/lovable-bot"
-  );
-  const [showSettings, setShowSettings] = useState(false);
-
-  const handleSaveWebhookUrl = () => {
-    localStorage.setItem('n8n_webhook_url', webhookUrl);
-    setShowSettings(false);
-  };
+  const [conversationHistory, setConversationHistory] = useState<
+    Array<{ role: 'user' | 'assistant'; content: string }>
+  >([]);
 
   const addMessage = (type: 'user' | 'bot', content: string) => {
     const newMessage: Message = {
@@ -72,11 +64,6 @@ const MedicalAnalyticsChat = ({
   const validateDataSufficiency = () => {
     if (!selectedPatientId) {
       addMessage('bot', '⚠️ Por favor selecciona un paciente para analizar su historial médico.');
-      return false;
-    }
-
-    if (!webhookUrl.trim()) {
-      addMessage('bot', '⚠️ Por favor configura la URL del webhook de N8N en los ajustes.');
       return false;
     }
 
@@ -119,29 +106,39 @@ const MedicalAnalyticsChat = ({
     setCurrentQuestion("");
     setIsLoading(true);
 
+    const updatedHistory = [...conversationHistory, { role: 'user' as const, content: question }];
+
     try {
-      const response = await sendMedicalAnalyticsQuery({
-        question,
-        selectedPatientId,
-        consultations,
-        symptomsData,
-        diagnosisData,
-        chartData,
-        webhookUrl
+      const consultationData = consultations.map(c => ({
+        date: c.dateTime || '',
+        patientName: c.patientName || '',
+        summary: c.summary || '',
+        transcription: c.transcription || '',
+      }));
+
+      const chatResponse = await fetch('/api/openai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: updatedHistory, consultations: consultationData }),
       });
 
-      if (response.success) {
-        const rawResponse = response.data?.response || 'Análisis completado exitosamente.';
-        const cleanedResponse = cleanAIResponse(rawResponse);
-        
-        // Mostrar solo la respuesta limpia, sin prefijos adicionales
-        addMessage('bot', cleanedResponse);
-      } else {
-        const errorMsg = response.error || 'No se pudo procesar la consulta médica.';
-        addMessage('bot', `❌ **Error en el Análisis**\n\n${errorMsg}\n\n💡 **Sugerencias:**\n• Verifica que el webhook N8N esté funcionando\n• Revisa la configuración de la URL\n• Intenta con una pregunta más específica`);
+      if (!chatResponse.ok) {
+        const err = await chatResponse.json();
+        throw new Error(err.error || 'Error en el chat médico');
       }
+
+      const aiResponse = (await chatResponse.json()).response as string;
+      const cleanedResponse = cleanAIResponse(aiResponse);
+
+      setConversationHistory([
+        ...updatedHistory,
+        { role: 'assistant', content: cleanedResponse },
+      ]);
+
+      addMessage('bot', cleanedResponse);
     } catch (error) {
-      addMessage('bot', `🚫 **Error de Conexión**\n\nNo se pudo conectar con el sistema de análisis médico.\n\n**Posibles causas:**\n• Problema de conectividad de red\n• El webhook N8N no está disponible\n• Timeout del servidor\n\n💡 Intenta nuevamente en unos minutos.`);
+      const errorMsg = error instanceof Error ? error.message : 'Error desconocido';
+      addMessage('bot', `❌ **Error en el Análisis**\n\n${errorMsg}\n\n💡 **Sugerencias:**\n• Verifica que la API key de OpenAI esté configurada\n• Intenta con una pregunta más específica`);
     } finally {
       setIsLoading(false);
     }
@@ -149,6 +146,7 @@ const MedicalAnalyticsChat = ({
 
   const handleClearConversation = () => {
     setMessages([]);
+    setConversationHistory([]);
   };
 
   const formatTime = (date: Date) => {
@@ -210,14 +208,6 @@ const MedicalAnalyticsChat = ({
                 </span>
               )}
             </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowSettings(!showSettings)}
-              className="text-medical-600 border-medical-300 hover:bg-medical-50"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
           </div>
           
           {patientStats && (
@@ -233,31 +223,6 @@ const MedicalAnalyticsChat = ({
           )}
         </CardHeader>
         
-        {showSettings && (
-          <CardContent className="pt-0">
-            <div className="space-y-3 p-4 bg-medical-50/30 rounded-lg">
-              <Label htmlFor="webhook-url" className="text-sm font-medium">
-                URL del Webhook N8N para Análisis Médico
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  id="webhook-url"
-                  type="url"
-                  value={webhookUrl}
-                  onChange={(e) => setWebhookUrl(e.target.value)}
-                  placeholder="https://n8nwebhook.botec.tech/webhook/lovable-bot"
-                  className="flex-1"
-                />
-                <Button onClick={handleSaveWebhookUrl} size="sm">
-                  Guardar
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Este webhook procesa los datos médicos con IA especializada para análisis inteligente y generación de contenido visual.
-              </p>
-            </div>
-          </CardContent>
-        )}
       </Card>
 
       {/* Suggested Questions */}

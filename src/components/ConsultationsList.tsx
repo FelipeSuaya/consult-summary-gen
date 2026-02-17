@@ -1,14 +1,12 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
 import { Patient } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getConsultationsByPatient } from "@/lib/storage";
-import { getPatients } from "@/lib/patients";
+import { usePatientsModule } from '@/modules/patients/hooks/use-patients';
+import { useConsultationsByPatient } from '@/modules/consultations/hooks/use-consultation-queries';
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { useAuth } from "@/contexts/AuthContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -24,120 +22,98 @@ const COLORS = ['#0588F0', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => {
-  const { user } = useAuth();
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [symptomsData, setSymptomsData] = useState<any[]>([]);
-  const [diagnosisData, setDiagnosisData] = useState<any[]>([]);
-  
-  const { 
-    data: patients = [],
-    isLoading: isLoadingPatients
-  } = useQuery({
-    queryKey: ['patients', user?.id],
-    queryFn: () => getPatients(),
-    enabled: !!user,
-  });
 
-  const { 
-    data: consultations = [],
+  const { patients, isLoading: isLoadingPatients } = usePatientsModule();
+
+  const {
+    data: consultations,
     isLoading: isLoadingConsultations,
     error,
-    refetch 
-  } = useQuery({
-    queryKey: ['consultationsByPatient', selectedPatientId],
-    queryFn: () => selectedPatientId ? getConsultationsByPatient(selectedPatientId) : Promise.resolve([]),
-    enabled: !!selectedPatientId,
-  });
+  } = useConsultationsByPatient(selectedPatientId);
 
-  useEffect(() => {
-    if (consultations && consultations.length > 0) {
-      const consultationsByMonth: Record<number, number> = {};
-      const currentYear = new Date().getFullYear();
-      
-      for (let i = 0; i < 12; i++) {
-        consultationsByMonth[i] = 0;
-      }
-      
-      consultations.forEach(consultation => {
-        const date = new Date(consultation.dateTime);
-        if (date.getFullYear() === currentYear) {
-          const month = date.getMonth();
-          consultationsByMonth[month] = (consultationsByMonth[month] || 0) + 1;
-        }
-      });
-      
-      const monthlyData = Object.keys(consultationsByMonth).map(month => ({
-        month: MONTHS[parseInt(month)],
-        consultas: consultationsByMonth[parseInt(month)],
-      }));
-      
-      setChartData(monthlyData);
-      
-      const symptomsMap: Record<string, number> = {};
-      const diagnosisMap: Record<string, number> = {};
-      
-      const keySymptoms = [
-        "dolor", "fiebre", "cefalea", "tos", "disnea", "náuseas", "vómitos", 
-        "diarrea", "astenia", "fatiga", "mareo", "vértigo", "disuria", 
-        "poliuria", "odinofagia", "disfonía", "prurito", "edema", "diaforesis"
-      ];
-      
-      const keyDiagnosis = [
-        "hipertensión", "diabetes", "neumonía", "bronquitis", "gastritis", 
-        "migraña", "infección", "artrosis", "artritis", "hipotiroidismo", 
-        "hipertiroidismo", "anemia", "colitis", "faringitis", "dermatitis",
-        "hipercolesterolemia", "depresión", "ansiedad", "insuficiencia"
-      ];
-      
-      consultations.forEach(consultation => {
-        if (consultation.summary) {
-          const lowerSummary = consultation.summary.toLowerCase();
-          
-          const motivoSection = lowerSummary.includes("motivo de consulta") ? 
-            lowerSummary.split("motivo de consulta:")[1]?.split(/diagnóstico|antecedentes|exámenes/i)[0] || "" : "";
-            
-          const diagnosticoSection = lowerSummary.includes("diagnóstico presuntivo") ? 
-            lowerSummary.split("diagnóstico presuntivo:")[1]?.split(/indicaciones|exámenes solicitados/i)[0] || "" : "";
-          
-          keySymptoms.forEach(symptom => {
-            if ((motivoSection && motivoSection.includes(symptom)) || lowerSummary.includes(symptom)) {
-              symptomsMap[symptom] = (symptomsMap[symptom] || 0) + 1;
-            }
-          });
-          
-          keyDiagnosis.forEach(diagnosis => {
-            if ((diagnosticoSection && diagnosticoSection.includes(diagnosis)) || lowerSummary.includes(diagnosis)) {
-              diagnosisMap[diagnosis] = (diagnosisMap[diagnosis] || 0) + 1;
-            }
-          });
-        }
-      });
-      
-      const symptomsChartData = Object.keys(symptomsMap)
-        .map(symptom => ({
-          name: symptom.charAt(0).toUpperCase() + symptom.slice(1),
-          value: symptomsMap[symptom]
-        }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 5);
-      
-      setSymptomsData(symptomsChartData);
-      
-      const diagnosisChartData = Object.keys(diagnosisMap)
-        .map(diagnosis => ({
-          name: diagnosis.charAt(0).toUpperCase() + diagnosis.slice(1),
-          value: diagnosisMap[diagnosis]
-        }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 5);
-      
-      setDiagnosisData(diagnosisChartData);
-    } else {
-      setChartData([]);
-      setSymptomsData([]);
-      setDiagnosisData([]);
+  const { chartData, symptomsData, diagnosisData } = useMemo(() => {
+    if (!consultations || consultations.length === 0) {
+      return { chartData: [] as any[], symptomsData: [] as any[], diagnosisData: [] as any[] };
     }
+
+    const consultationsByMonth: Record<number, number> = {};
+    const currentYear = new Date().getFullYear();
+
+    for (let i = 0; i < 12; i++) {
+      consultationsByMonth[i] = 0;
+    }
+
+    consultations.forEach(consultation => {
+      const date = new Date(consultation.dateTime);
+      if (date.getFullYear() === currentYear) {
+        const month = date.getMonth();
+        consultationsByMonth[month] = (consultationsByMonth[month] || 0) + 1;
+      }
+    });
+
+    const chartData = Object.keys(consultationsByMonth).map(month => ({
+      month: MONTHS[parseInt(month)],
+      consultas: consultationsByMonth[parseInt(month)],
+    }));
+
+    const symptomsMap: Record<string, number> = {};
+    const diagnosisMap: Record<string, number> = {};
+
+    const keySymptoms = [
+      "dolor", "fiebre", "cefalea", "tos", "disnea", "náuseas", "vómitos",
+      "diarrea", "astenia", "fatiga", "mareo", "vértigo", "disuria",
+      "poliuria", "odinofagia", "disfonía", "prurito", "edema", "diaforesis"
+    ];
+
+    const keyDiagnosis = [
+      "hipertensión", "diabetes", "neumonía", "bronquitis", "gastritis",
+      "migraña", "infección", "artrosis", "artritis", "hipotiroidismo",
+      "hipertiroidismo", "anemia", "colitis", "faringitis", "dermatitis",
+      "hipercolesterolemia", "depresión", "ansiedad", "insuficiencia"
+    ];
+
+    consultations.forEach(consultation => {
+      if (consultation.summary) {
+        const lowerSummary = consultation.summary.toLowerCase();
+
+        const motivoSection = lowerSummary.includes("motivo de consulta") ?
+          lowerSummary.split("motivo de consulta:")[1]?.split(/diagnóstico|antecedentes|exámenes/i)[0] || "" : "";
+
+        const diagnosticoSection = lowerSummary.includes("diagnóstico presuntivo") ?
+          lowerSummary.split("diagnóstico presuntivo:")[1]?.split(/indicaciones|exámenes solicitados/i)[0] || "" : "";
+
+        keySymptoms.forEach(symptom => {
+          if ((motivoSection && motivoSection.includes(symptom)) || lowerSummary.includes(symptom)) {
+            symptomsMap[symptom] = (symptomsMap[symptom] || 0) + 1;
+          }
+        });
+
+        keyDiagnosis.forEach(diagnosis => {
+          if ((diagnosticoSection && diagnosticoSection.includes(diagnosis)) || lowerSummary.includes(diagnosis)) {
+            diagnosisMap[diagnosis] = (diagnosisMap[diagnosis] || 0) + 1;
+          }
+        });
+      }
+    });
+
+    const symptomsData = Object.keys(symptomsMap)
+      .map(symptom => ({
+        name: symptom.charAt(0).toUpperCase() + symptom.slice(1),
+        value: symptomsMap[symptom]
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+
+    const diagnosisData = Object.keys(diagnosisMap)
+      .map(diagnosis => ({
+        name: diagnosis.charAt(0).toUpperCase() + diagnosis.slice(1),
+        value: diagnosisMap[diagnosis]
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+
+    return { chartData, symptomsData, diagnosisData };
   }, [consultations]);
 
   const handlePatientChange = (value: string) => {
@@ -196,7 +172,7 @@ const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => 
         </div>
       )}
 
-      {selectedPatientId && !isLoadingConsultations && consultations.length === 0 && (
+      {selectedPatientId && !isLoadingConsultations && (!consultations || consultations.length === 0) && (
         <div className="text-center py-8">
           <div className="p-4 rounded-lg bg-muted/30">
             <Stethoscope className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
@@ -207,7 +183,7 @@ const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => 
         </div>
       )}
 
-      {consultations.length > 0 && (
+      {consultations && consultations.length > 0 && (
         <Tabs defaultValue="charts" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="charts" className="flex items-center gap-2">

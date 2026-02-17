@@ -1,24 +1,3 @@
-
-// n8n response format - actual structure from n8n (supports both formats)
-export interface N8nResponse {
-  transcripcion?: string;
-  Subjective?: string;
-  Objective?: string;
-  Assessment?: string;
-  Plan?: string;
-  "Diagnostico Presuntivo"?: string;
-  DiagnosticoPresuntivo?: string;
-  Laboratorio?: string;
-  output?: {
-    Subjective: string;
-    Objective: string;
-    Assessment: string;
-    Plan: string;
-    "Diagnostico Presuntivo": string;
-    Laboratorio: string;
-  };
-}
-
 // Internal SoapData interface (detailed structure for UI)
 export interface SoapData {
   meta?: {
@@ -64,49 +43,6 @@ export interface SoapData {
     message: string;
   }>;
 }
-
-// Converter function from n8n format to internal format
-export const convertN8nToSoapData = (n8nData: N8nResponse | N8nResponse[], meta?: SoapData['meta']): SoapData => {
-  // Handle array response (first item) or direct response
-  let data: any;
-  
-  if (Array.isArray(n8nData)) {
-    data = n8nData[0];
-  } else {
-    data = n8nData;
-  }
-  
-  // Handle nested output format or direct format
-  const soapFields = data.output || data;
-  
-  if (!soapFields) {
-    throw new Error('Invalid n8n response format');
-  }
-
-  // Handle both "Diagnostico Presuntivo" and "DiagnosticoPresuntivo" formats
-  const diagnostico = soapFields["Diagnostico Presuntivo"] || 
-                     soapFields["DiagnosticoPresuntivo"] || 
-                     '';
-
-  return {
-    meta,
-    transcripcion: data.transcripcion || '',
-    subjective: {
-      chiefComplaint: soapFields.Subjective || '',
-    },
-    objective: {
-      physicalExam: soapFields.Objective || '',
-    },
-    assessment: {
-      impression: soapFields.Assessment || '',
-    },
-    plan: {
-      treatment: soapFields.Plan || '',
-    },
-    diagnosticoPresuntivo: diagnostico,
-    laboratorio: soapFields.Laboratorio || '',
-  };
-};
 
 // Generate formatted summary from SOAP data (without transcription)
 export const generateFormattedSummary = (soapData: SoapData): string => {

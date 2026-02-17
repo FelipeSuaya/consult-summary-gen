@@ -1,8 +1,7 @@
 
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Patient } from "@/types";
-import { getPatients, deletePatient } from "@/lib/patients";
+import { usePatientsModule } from '@/modules/patients/hooks/use-patients';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { UserPlus, Search, Trash2, Phone, Mail, ChevronDown, ChevronUp, Stethoscope, User, Calendar, Pencil } from "lucide-react";
@@ -11,7 +10,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { savePatient } from "@/lib/patients";
 import PatientConsultations from "@/components/PatientConsultations";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import DateFilter from "@/components/DateFilter";
@@ -34,53 +32,57 @@ const PatientsList = ({ onStartConsultation }: PatientsListProps) => {
   const [sortByDateAscending, setSortByDateAscending] = useState<boolean>(false);
   
   const { toast } = useToast();
-  
+
   const {
-    data: patients = [],
+    patients,
     isLoading,
     error,
-    refetch
-  } = useQuery({
-    queryKey: ['patients', startDate, endDate],
-    queryFn: () => getPatients(startDate, endDate)
-  });
+    createPatient,
+    updatePatient,
+    deletePatient: deletePatientMutation
+  } = usePatientsModule();
 
   useEffect(() => {
-    if (searchTerm.trim() === "") {
-      let sortedPatients = [...patients];
-      
-      if (sortByDateAscending) {
-        sortedPatients.sort((a, b) => {
-          if (!a.firstConsultationDate) return 1;
-          if (!b.firstConsultationDate) return -1;
-          return new Date(a.firstConsultationDate).getTime() - new Date(b.firstConsultationDate).getTime();
-        });
-      } else {
-        sortedPatients.sort((a, b) => {
-          if (!a.firstConsultationDate) return 1;
-          if (!b.firstConsultationDate) return -1;
-          return new Date(b.firstConsultationDate).getTime() - new Date(a.firstConsultationDate).getTime();
-        });
-      }
-      
-      setFilteredPatients(sortedPatients);
-    } else {
-      const filtered = patients.filter(patient => 
-        patient.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    let sorted = [...patients];
+
+    // Filter by date if provided
+    if (startDate || endDate) {
+      sorted = sorted.filter(patient => {
+        if (!patient.firstConsultationDate) return false;
+        const consultDate = new Date(patient.firstConsultationDate);
+        if (startDate && consultDate < startDate) return false;
+        if (endDate && consultDate > endDate) return false;
+        return true;
+      });
+    }
+
+    // Filter by search
+    if (searchTerm.trim() !== "") {
+      sorted = sorted.filter(patient =>
+        patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (patient.dni && patient.dni.toLowerCase().includes(searchTerm.toLowerCase()))
       );
-      setFilteredPatients(filtered);
     }
-  }, [searchTerm, patients, sortByDateAscending]);
+
+    // Sort by date
+    sorted.sort((a, b) => {
+      if (!a.firstConsultationDate) return 1;
+      if (!b.firstConsultationDate) return -1;
+      const dateA = new Date(a.firstConsultationDate).getTime();
+      const dateB = new Date(b.firstConsultationDate).getTime();
+      return sortByDateAscending ? dateA - dateB : dateB - dateA;
+    });
+
+    setFilteredPatients(sorted);
+  }, [searchTerm, patients, sortByDateAscending, startDate, endDate]);
 
   const handleDeletePatient = async () => {
     if (patientToDelete) {
-      const error = await deletePatient(patientToDelete);
-      if (error) {
-        toast({ title: "Error", description: error, variant: "destructive" });
-      } else {
+      try {
+        await deletePatientMutation.mutateAsync(patientToDelete);
         toast({ title: "Paciente eliminado", description: "El paciente ha sido eliminado correctamente" });
-        refetch();
+      } catch (err) {
+        toast({ title: "Error", description: err instanceof Error ? err.message : "Error al eliminar", variant: "destructive" });
       }
       setPatientToDelete(null);
     }
@@ -92,15 +94,14 @@ const PatientsList = ({ onStartConsultation }: PatientsListProps) => {
       return;
     }
     try {
-      const result = await savePatient(editingPatient);
-      if (result.error) {
-        toast({ title: "Error", description: result.error, variant: "destructive" });
-        return;
+      if (editingPatient.id) {
+        await updatePatient.mutateAsync({ id: editingPatient.id, data: { name: editingPatient.name, dni: editingPatient.dni, phone: editingPatient.phone, age: editingPatient.age, email: editingPatient.email, notes: editingPatient.notes } });
+      } else {
+        await createPatient.mutateAsync({ name: editingPatient.name, dni: editingPatient.dni, phone: editingPatient.phone, age: editingPatient.age, email: editingPatient.email, notes: editingPatient.notes });
       }
       toast({ title: "Guardado", description: "Datos del paciente guardados correctamente" });
       setShowNewPatientDialog(false);
       setEditingPatient(null);
-      refetch();
     } catch (error) {
       console.error("Error al guardar paciente:", error);
       toast({ title: "Error", description: "No se pudo guardar el paciente", variant: "destructive" });

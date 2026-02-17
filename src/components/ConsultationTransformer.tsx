@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
-import { getConsultations, updateConsultation } from "@/lib/storage";
+import { getConsultationsAction, updateConsultationAction } from '@/modules/consultations/actions/consultation-actions';
 import { groqApi } from "@/lib/api";
 import { RefreshCw, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { ConsultationRecord } from "@/types";
@@ -33,7 +33,7 @@ const ConsultationTransformer = () => {
       setStatus(prev => ({ ...prev, isRunning: true, processed: 0, success: 0, errors: 0 }));
       
       // Obtener todas las consultas
-      const consultations = await getConsultations();
+      const consultations = await getConsultationsAction();
       console.log(`Encontradas ${consultations.length} consultas para transformar`);
       
       setStatus(prev => ({ ...prev, total: consultations.length }));
@@ -63,42 +63,21 @@ const ConsultationTransformer = () => {
             continue;
           }
 
-          // Llamar al webhook de N8N para generar nuevo resumen
-          const webhookUrl = "https://n8ndrcarlosllera.labredd.com/webhook/medical-summary";
-          
-          const requestBody = {
-            transcription: consultation.transcription,
-            patientName: consultation.patientName,
-            systemPrompt: systemPrompt
-          };
+          // Generar nuevo resumen con OpenAI directamente
+          console.log(`Generando resumen con OpenAI para ${consultation.patientName}`);
 
-          console.log(`Enviando transcripción a N8N para ${consultation.patientName}`);
-          
-          const response = await fetch(webhookUrl, {
+          const soapResponse = await fetch('/api/openai/soap', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transcription: consultation.transcription }),
           });
 
-          if (!response.ok) {
-            throw new Error(`Error del webhook N8N: ${response.status}`);
+          if (!soapResponse.ok) {
+            const err = await soapResponse.json();
+            throw new Error(err.error || 'Error al generar resumen SOAP');
           }
 
-          const result = await response.json();
-          let newSummary = '';
-
-          // Extraer el resumen de la respuesta
-          if (result.summary) {
-            newSummary = result.summary;
-          } else if (result.mensaje) {
-            newSummary = result.mensaje;
-          } else if (typeof result === 'string') {
-            newSummary = result;
-          } else {
-            throw new Error('No se pudo extraer el resumen de la respuesta');
-          }
+          let newSummary = (await soapResponse.json()).summary as string;
 
           // Aplicar correcciones médicas
           newSummary = groqApi.correctMedicalTerms(newSummary);
@@ -107,17 +86,10 @@ const ConsultationTransformer = () => {
           const patientData = groqApi.extractPatientData(newSummary);
 
           // Actualizar la consulta con el nuevo resumen
-          const updatedConsultation: ConsultationRecord = {
-            ...consultation,
+          await updateConsultationAction(consultation.id, {
             summary: newSummary,
             patientData: { ...consultation.patientData, ...patientData }
-          };
-
-          const updateError = await updateConsultation(updatedConsultation);
-          
-          if (updateError) {
-            throw new Error(updateError);
-          }
+          });
 
           successCount++;
           console.log(`✅ Consulta ${consultation.patientName} transformada exitosamente`);
