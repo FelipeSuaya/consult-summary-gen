@@ -41,9 +41,9 @@ const DateFilter = ({ onDateChange, onSortToggle, sortAscending, showSortToggle 
   };
 
   return (
-    <div className="bg-white rounded-lg p-3 border border-medical-200 shadow-sm">
+    <div className="bg-card rounded-lg p-3 border border-border shadow-wuru">
       <div className="flex flex-wrap items-center gap-3 mb-1">
-        <Label>Filtrar por fecha de primera consulta:</Label>
+        <Label className="text-muted-foreground">Filtrar por fecha de primera consulta:</Label>
         {(startDate || endDate) && (
           <Button variant="ghost" size="sm" onClick={handleClearFilter} className="h-7 px-2 text-sm">
             <RotateCcw className="h-3.5 w-3.5 mr-1" />
@@ -51,12 +51,12 @@ const DateFilter = ({ onDateChange, onSortToggle, sortAscending, showSortToggle 
           </Button>
         )}
       </div>
-      
+
       <div className="flex flex-wrap gap-3 items-center">
         <div className="flex gap-2 items-center">
           <Popover open={isStartOpen} onOpenChange={setIsStartOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="pl-3 pr-2 text-medical-700 border-medical-300">
+              <Button variant="outline" size="sm" className="pl-3 pr-2 text-foreground border-border">
                 {startDate ? format(startDate, "dd/MM/yyyy", { locale: es }) : "Fecha inicial"}
                 <CalendarIcon className="ml-2 h-4 w-4" />
               </Button>
@@ -72,11 +72,11 @@ const DateFilter = ({ onDateChange, onSortToggle, sortAscending, showSortToggle 
             </PopoverContent>
           </Popover>
 
-          <span className="text-medical-500">a</span>
+          <span className="text-muted-foreground">a</span>
 
           <Popover open={isEndOpen} onOpenChange={setIsEndOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="pl-3 pr-2 text-medical-700 border-medical-300">
+              <Button variant="outline" size="sm" className="pl-3 pr-2 text-foreground border-border">
                 {endDate ? format(endDate, "dd/MM/yyyy", { locale: es }) : "Fecha final"}
                 <CalendarIcon className="ml-2 h-4 w-4" />
               </Button>
@@ -95,22 +95,22 @@ const DateFilter = ({ onDateChange, onSortToggle, sortAscending, showSortToggle 
         </div>
 
         {showSortToggle && onSortToggle && (
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={onSortToggle}
-            className="text-medical-700 border-medical-300 ml-auto"
+            className="text-foreground border-border ml-auto"
           >
             Ordenar por fecha {sortAscending ? <ArrowDownIcon className="ml-1 h-4 w-4" /> : <ArrowUpIcon className="ml-1 h-4 w-4" />}
           </Button>
         )}
-        
+
         {(startDate || endDate) && (
           <div className="ml-auto flex items-center">
-            <Badge variant="secondary" className="bg-medical-100 text-medical-800 hover:bg-medical-200">
-              {startDate && endDate 
+            <Badge variant="secondary" className="bg-primary/15 text-primary hover:bg-primary/20">
+              {startDate && endDate
                 ? `${format(startDate, "dd/MM/yyyy", { locale: es })} - ${format(endDate, "dd/MM/yyyy", { locale: es })}`
-                : startDate 
+                : startDate
                   ? `Desde ${format(startDate, "dd/MM/yyyy", { locale: es })}`
                   : `Hasta ${format(endDate!, "dd/MM/yyyy", { locale: es })}`}
             </Badge>
