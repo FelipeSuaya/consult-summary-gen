@@ -1,6 +1,7 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
-import { X, Download, Printer } from "lucide-react";
+import { X, Download, Printer, Volume2, Calendar, User } from "lucide-react";
 import { ConsultationRecord } from "@/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -42,7 +43,6 @@ const ConsultationFullscreenModal = ({
       const element = document.getElementById('consultation-print-content');
       if (!element) return;
 
-      // Configurar el elemento para impresión
       element.style.width = '210mm';
       element.style.minHeight = 'auto';
       element.style.padding = '20px';
@@ -59,7 +59,7 @@ const ConsultationFullscreenModal = ({
 
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
-      
+
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
       const imgWidth = canvas.width;
@@ -70,7 +70,6 @@ const ConsultationFullscreenModal = ({
 
       pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
 
-      // Si el contenido es muy largo, agregar páginas adicionales
       if (imgHeight * ratio > pdfHeight) {
         const totalPages = Math.ceil((imgHeight * ratio) / pdfHeight);
         for (let i = 1; i < totalPages; i++) {
@@ -82,6 +81,12 @@ const ConsultationFullscreenModal = ({
 
       const fileName = `consulta_${patientName?.replace(/\s+/g, '_') || 'paciente'}_${format(new Date(consultation.dateTime), 'yyyy-MM-dd')}.pdf`;
       pdf.save(fileName);
+
+      // Reset styles
+      element.style.width = '';
+      element.style.minHeight = '';
+      element.style.padding = '';
+      element.style.backgroundColor = '';
 
       toast({
         title: "PDF generado",
@@ -107,86 +112,101 @@ const ConsultationFullscreenModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent 
-        className="max-w-none w-screen h-screen max-h-screen p-0 gap-0"
-        style={{ margin: 0 }}
-      >
-        {/* Header con controles */}
-        <div className="flex items-center justify-between p-4 border-b border-border bg-card sticky top-0 z-10 print:hidden">
-          <div className="flex items-center gap-4">
-            <h2 className="text-xl font-semibold text-foreground">
-              Consulta - {format(new Date(consultation.dateTime), "PPP", { locale: es })}
-            </h2>
-            <div className="text-sm text-muted-foreground">
-              {format(new Date(consultation.dateTime), "p", { locale: es })}
+      <DialogPortal>
+        <DialogOverlay />
+        <DialogPrimitive.Content
+          className="fixed inset-0 z-50 flex flex-col bg-background overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+        >
+          {/* Floating toolbar */}
+          <div className="shrink-0 flex items-center justify-between px-6 py-3 border-b border-border/60 print:hidden">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <User className="h-3.5 w-3.5" />
+                <span className="text-sm font-medium text-foreground">
+                  {patientName || consultation.patientName}
+                </span>
+              </div>
+              <span className="text-border">·</span>
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Calendar className="h-3.5 w-3.5" />
+                <span className="text-sm">
+                  {format(new Date(consultation.dateTime), "d MMM yyyy, HH:mm", { locale: es })}
+                </span>
+              </div>
+              {patientAge && (
+                <>
+                  <span className="text-border">·</span>
+                  <span className="text-sm text-muted-foreground">{patientAge} años</span>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <Button
+                onClick={handleExportPDF}
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <Download className="h-3.5 w-3.5 mr-1.5" />
+                PDF
+              </Button>
+              <Button
+                onClick={handlePrint}
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <Printer className="h-3.5 w-3.5 mr-1.5" />
+                Imprimir
+              </Button>
+              <div className="w-px h-5 bg-border/60 mx-1" />
+              <Button
+                onClick={onClose}
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button 
-              onClick={handleExportPDF}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Exportar PDF
-            </Button>
-            <Button 
-              onClick={handlePrint}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Printer className="h-4 w-4" />
-              Imprimir
-            </Button>
-            <Button 
-              onClick={onClose}
-              variant="ghost"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <X className="h-4 w-4" />
-              Cerrar
-            </Button>
-          </div>
-        </div>
 
-        {/* Contenido principal */}
-        <div className="flex-1 overflow-y-auto bg-background">
-          <div id="consultation-print-content" className="max-w-4xl mx-auto p-6 bg-card min-h-full print:bg-white">
-            {/* Header de impresión */}
-            <PrintHeader
-              patientName={patientName}
-              age={patientAge}
-              id={patientId}
-              dateTime={consultation.dateTime}
-              clinician={'No especificado'}
-              version="1.0"
-            />
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto">
+            <div id="consultation-print-content" className="max-w-4xl mx-auto px-6 py-8 print:bg-white">
+              {/* Print header (hidden on screen) */}
+              <PrintHeader
+                patientName={patientName}
+                age={patientAge}
+                id={patientId}
+                dateTime={consultation.dateTime}
+                clinician={'No especificado'}
+                version="1.0"
+              />
 
-            {/* Audio si existe */}
-            {consultation.audioUrl && (
-              <div className="mb-6 print:hidden">
-                <h4 className="font-medium mb-2 text-foreground flex items-center gap-2">
-                  Audio de la consulta:
-                </h4>
-                <div className="bg-muted/30 p-3 rounded-md border border-border">
-                  <audio controls className="w-full">
+              {/* Audio player */}
+              {consultation.audioUrl && (
+                <div className="mb-8 print:hidden">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Volume2 className="h-4 w-4 text-primary/70" />
+                    <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Audio de la consulta
+                    </span>
+                  </div>
+                  <audio controls className="w-full h-10 rounded-lg [&::-webkit-media-controls-panel]:bg-muted/50">
                     <source src={consultation.audioUrl} type="audio/webm" />
                     Su navegador no soporta el elemento de audio.
                   </audio>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Contenido SOAP */}
-            <div className="space-y-6">
+              {/* SOAP content */}
               <MedicalSoapCards soapData={soapData} />
             </div>
           </div>
-        </div>
-      </DialogContent>
+        </DialogPrimitive.Content>
+      </DialogPortal>
     </Dialog>
   );
 };
