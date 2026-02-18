@@ -14,6 +14,7 @@ export interface ProcessingJob {
 	id: string
 	patientName: string
 	patientId?: string
+	isNewPatient?: boolean
 	audioBlob: Blob
 	audioUrl?: string
 	realtimeTranscript?: string

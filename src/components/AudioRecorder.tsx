@@ -12,6 +12,7 @@ import { LoggingService } from "@/lib/logging";
 import { useRealtimeTranscription } from "@/hooks/use-realtime-transcription";
 import LiveTranscript from "./LiveTranscript";
 import { useProcessingQueueStore } from "@/modules/consultations/stores/processing-queue-store";
+import { createPatientAction } from "@/modules/patients/actions/patient-actions";
 
 interface AudioRecorderProps {
   preselectedPatient?: Patient | null;
@@ -496,18 +497,19 @@ const AudioRecorder = ({ preselectedPatient }: AudioRecorderProps) => {
     }, 1000);
   };
 
-  const enqueueAudioForProcessing = (audioBlob: Blob) => {
+  const enqueueAudioForProcessing = (audioBlob: Blob, overrides?: { patientId?: string; isNewPatient?: boolean }) => {
     addJob({
       id: crypto.randomUUID(),
       patientName: patientName.trim(),
-      patientId: selectedPatient?.id,
+      patientId: overrides?.patientId ?? selectedPatient?.id,
+      isNewPatient: overrides?.isNewPatient,
       audioBlob,
       realtimeTranscript: rtTranscript || undefined,
       dateTime: new Date().toISOString(),
     });
   };
 
-  const stopRecording = () => {
+  const stopRecording = async () => {
     if (mediaRecorderRef.current && isRecording) {
       try {
         LoggingService.info('audio-recorder', 'Deteniendo grabación', {
@@ -533,6 +535,20 @@ const AudioRecorder = ({ preselectedPatient }: AudioRecorderProps) => {
 
         cleanupResources();
 
+        // Auto-create patient if none selected
+        let overrides: { patientId?: string; isNewPatient?: boolean } | undefined;
+        if (!selectedPatient && patientName.trim()) {
+          try {
+            const result = await createPatientAction({ name: patientName.trim() });
+            if (result.id) {
+              overrides = { patientId: result.id, isNewPatient: true };
+            }
+          } catch (err) {
+            console.error('Error auto-creating patient:', err);
+            // Continue without linking — consultation will still save with patient_name
+          }
+        }
+
         // Build audio blob and enqueue for background processing
         const allChunks = [...audioChunksRef.current];
         const mimeType = mediaRecorderRef.current?.mimeType || 'audio/webm';
@@ -541,7 +557,7 @@ const AudioRecorder = ({ preselectedPatient }: AudioRecorderProps) => {
           : null;
 
         if (audioBlob && audioBlob.size > 0) {
-          enqueueAudioForProcessing(audioBlob);
+          enqueueAudioForProcessing(audioBlob, overrides);
 
           toast({
             title: "Grabación detenida",
