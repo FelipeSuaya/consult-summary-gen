@@ -46,25 +46,25 @@ function LiveTranscript({ transcript, turnText, isConnected, isConnecting, error
 
       {/* Error banner */}
       {error && (
-        <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+        <div className="rounded-md bg-red-950/30 border border-red-800/50 px-3 py-2 text-xs text-red-400">
           {error}. Se usará transcripción por lotes al finalizar.
         </div>
       )}
 
       {/* Transcript area */}
-      <ScrollArea className="h-32 w-full rounded-md border bg-gray-50 p-3">
-        <div className="text-sm leading-relaxed">
+      <ScrollArea className="h-32 w-full rounded-md border border-border bg-secondary p-3">
+        <div className="text-sm leading-relaxed text-foreground">
           {hasText ? (
             <>
               {transcript && <span>{transcript}</span>}
               {turnText && (
-                <span className="text-gray-400 italic">
+                <span className="text-muted-foreground italic">
                   {transcript ? ' ' : ''}{turnText}
                 </span>
               )}
             </>
           ) : (
-            <span className="text-gray-400 italic">
+            <span className="text-muted-foreground italic">
               {isConnected
                 ? 'Esperando audio...'
                 : isConnecting

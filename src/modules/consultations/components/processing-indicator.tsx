@@ -100,21 +100,21 @@ function CompletedJobCard({
 	}, [])
 
 	return (
-		<div className="rounded-lg border border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20 p-3 shadow-sm">
+		<div className="rounded-lg border border-green-900 bg-green-950/20 p-3 shadow-sm">
 			<div className="flex items-center gap-2.5">
-				<CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
+				<CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
 				<div className="flex-1 min-w-0">
 					<span className="text-sm font-medium text-foreground truncate block">
 						{job.patientName}
 					</span>
-					<p className="text-xs text-green-700 dark:text-green-400">Consulta lista</p>
+					<p className="text-xs text-green-400">Consulta lista</p>
 				</div>
 				<div className="flex items-center gap-1">
 					<Button
 						variant="ghost"
 						size="sm"
 						onClick={onView}
-						className="h-7 px-2 text-xs text-green-700 hover:text-green-900 dark:text-green-400"
+						className="h-7 px-2 text-xs text-green-400 hover:text-green-300"
 					>
 						<Eye className="h-3 w-3 mr-1" />
 						Ver

@@ -631,7 +631,7 @@ const AudioRecorder = ({ preselectedPatient }: AudioRecorderProps) => {
           </div>
 
           {showPatientSelector && (
-            <div className="mt-2 border rounded-md p-4 bg-gray-50">
+            <div className="mt-2 border border-border rounded-md p-4 bg-secondary">
               <PatientSelector
                 onPatientSelect={handlePatientSelect}
                 selectedPatientId={selectedPatient?.id}
@@ -653,7 +653,7 @@ const AudioRecorder = ({ preselectedPatient }: AudioRecorderProps) => {
               <div className="space-y-2">
                 <div className="flex items-center justify-center space-x-2">
                   <div className="h-3 w-3 rounded-full bg-red-500 animate-pulse-recording"></div>
-                  <span className="text-red-600 font-medium">Grabando: {formatTime(recordingTime)}</span>
+                  <span className="text-red-400 font-medium">Grabando: {formatTime(recordingTime)}</span>
                 </div>
                 <LiveTranscript
                   transcript={rtTranscript}
@@ -663,7 +663,7 @@ const AudioRecorder = ({ preselectedPatient }: AudioRecorderProps) => {
                   error={rtError}
                 />
                 {backupAudios.length > 0 && (
-                  <div className="text-xs text-green-600 text-center">
+                  <div className="text-xs text-green-400 text-center">
                     {backupAudios.length} respaldos guardados
                   </div>
                 )}
@@ -710,7 +710,7 @@ const AudioRecorder = ({ preselectedPatient }: AudioRecorderProps) => {
                 variant="default"
                 size="lg"
                 disabled={!patientName.trim()}
-                className="w-full sm:w-auto bg-medical-600 hover:bg-medical-700"
+                className="w-full sm:w-auto"
               >
                 <Mic className="mr-2 h-4 w-4" />
                 Iniciar Grabación

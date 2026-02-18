@@ -199,20 +199,20 @@ const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => 
           <TabsContent value="charts" className="space-y-8">
             {/* Summary Cards */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-lg bg-gradient-to-r from-medical-50 to-medical-100/50 border border-medical-200/50">
+              <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
                 <div className="flex items-center gap-2 mb-1">
-                  <Calendar className="h-4 w-4 text-medical-600" />
-                  <span className="text-sm font-medium text-medical-700">Total Consultas</span>
+                  <Calendar className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium text-primary">Total Consultas</span>
                 </div>
-                <p className="text-2xl font-bold text-medical-900">{consultations.length}</p>
+                <p className="text-2xl font-bold text-foreground">{consultations.length}</p>
               </div>
-              
-              <div className="p-4 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100/50 border border-slate-200/50">
+
+              <div className="p-4 rounded-lg bg-secondary border border-border">
                 <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp className="h-4 w-4 text-slate-600" />
-                  <span className="text-sm font-medium text-slate-700">Última Consulta</span>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-muted-foreground">Última Consulta</span>
                 </div>
-                <p className="text-sm font-bold text-slate-900">
+                <p className="text-sm font-bold text-foreground">
                   {format(new Date(consultations[0].dateTime), "dd MMM", { locale: es })}
                 </p>
               </div>
@@ -221,7 +221,7 @@ const ConsultationsList = ({ onConsultationSelect }: ConsultationsListProps) => 
             {/* Monthly Consultations Chart */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-medical-600" />
+                <BarChart3 className="h-5 w-5 text-primary" />
                 Consultas Mensuales - {new Date().getFullYear()}
               </h3>
               <div className="h-64 bg-background rounded-lg border p-4">
