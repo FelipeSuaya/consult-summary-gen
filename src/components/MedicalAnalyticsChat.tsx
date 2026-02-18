@@ -1,10 +1,8 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Bot, User, Trash2, Send, Loader2, Database, AlertCircle, BarChart3 } from "lucide-react";
+import { Bot, User, Trash2, Send, Loader2, Sparkles } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
 
 interface MedicalAnalyticsChatProps {
@@ -23,26 +21,20 @@ interface Message {
 }
 
 const suggestedQuestions = [
-  "¿Cuántas veces vino por dolor de cabeza en los últimos 6 meses?",
-  "¿Qué patrones de síntomas detectas en este paciente?",
-  "¿Hay correlación entre diagnósticos y época del año?",
-  "Resumen del historial clínico completo de este paciente",
-  "¿Cuál es el síntoma más frecuente y su evolución temporal?",
-  "¿Hay tendencias preocupantes en los diagnósticos recientes?",
-  "¿Qué recomendaciones darías basado en el historial médico?",
-  "¿Cuándo fue la última vez que presentó este síntoma específico?",
-  "Crea un gráfico de la evolución de los síntomas principales",
-  "Muestra un diagrama del proceso diagnóstico recomendado",
-  "Diseña un esquema anatómico de las áreas afectadas",
-  "Genera una línea de tiempo de las consultas médicas"
+  "Resumen del historial clínico completo",
+  "¿Qué patrones de síntomas detectas?",
+  "¿Hay tendencias preocupantes recientes?",
+  "¿Qué recomendaciones darías basado en el historial?",
+  "Evolución temporal de los síntomas principales",
+  "Correlación entre diagnósticos y época del año",
 ];
 
-const MedicalAnalyticsChat = ({ 
-  selectedPatientId, 
-  consultations, 
-  symptomsData, 
-  diagnosisData, 
-  chartData 
+const MedicalAnalyticsChat = ({
+  selectedPatientId,
+  consultations,
+  symptomsData,
+  diagnosisData,
+  chartData
 }: MedicalAnalyticsChatProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState("");
@@ -50,6 +42,13 @@ const MedicalAnalyticsChat = ({
   const [conversationHistory, setConversationHistory] = useState<
     Array<{ role: 'user' | 'assistant'; content: string }>
   >([]);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, isLoading]);
 
   const addMessage = (type: 'user' | 'bot', content: string) => {
     const newMessage: Message = {
@@ -63,44 +62,35 @@ const MedicalAnalyticsChat = ({
 
   const validateDataSufficiency = () => {
     if (!selectedPatientId) {
-      addMessage('bot', '⚠️ Por favor selecciona un paciente para analizar su historial médico.');
+      addMessage('bot', 'Por favor selecciona un paciente para analizar su historial médico.');
       return false;
     }
 
     if (consultations.length === 0) {
-      addMessage('bot', '📋 Este paciente no tiene consultas médicas registradas aún. Necesito datos históricos para poder analizar.');
+      addMessage('bot', 'Este paciente no tiene consultas médicas registradas aún. Necesito datos históricos para poder analizar.');
       return false;
     }
 
-    // Verificar que las consultas tienen resúmenes o transcripciones
     const consultationsWithContent = consultations.filter(c => c.summary || c.transcription);
     if (consultationsWithContent.length === 0) {
-      addMessage('bot', '📄 Las consultas de este paciente no tienen resúmenes médicos procesados. Necesito contenido médico para analizar.');
+      addMessage('bot', 'Las consultas de este paciente no tienen resúmenes médicos procesados. Necesito contenido médico para analizar.');
       return false;
     }
 
     return true;
   };
 
-  // Función para limpiar la respuesta de la IA
   const cleanAIResponse = (response: string): string => {
     if (!response) return '';
-    
-    // Remover caracteres problemáticos y normalizar saltos de línea
     return response
-      .replace(/\r\n/g, '\n') // Normalizar saltos de línea de Windows
-      .replace(/\r/g, '\n')   // Normalizar saltos de línea de Mac clásico
-      .trim(); // Eliminar espacios en blanco al inicio y final
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .trim();
   };
 
   const handleSendQuestion = async (question: string = currentQuestion) => {
-    if (!question.trim()) {
-      return;
-    }
-
-    if (!validateDataSufficiency()) {
-      return;
-    }
+    if (!question.trim()) return;
+    if (!validateDataSufficiency()) return;
 
     addMessage('user', question);
     setCurrentQuestion("");
@@ -138,7 +128,7 @@ const MedicalAnalyticsChat = ({
       addMessage('bot', cleanedResponse);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Error desconocido';
-      addMessage('bot', `❌ **Error en el Análisis**\n\n${errorMsg}\n\n💡 **Sugerencias:**\n• Verifica que la API key de OpenAI esté configurada\n• Intenta con una pregunta más específica`);
+      addMessage('bot', `**Error en el Análisis**\n\n${errorMsg}\n\n**Sugerencias:**\n- Verifica que la API key de OpenAI esté configurada\n- Intenta con una pregunta más específica`);
     } finally {
       setIsLoading(false);
     }
@@ -150,13 +140,12 @@ const MedicalAnalyticsChat = ({
   };
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('es-ES', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return date.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
-  // Calcular estadísticas del paciente para mostrar contexto
   const patientStats = selectedPatientId ? {
     totalConsultations: consultations.length,
     consultationsWithSummary: consultations.filter(c => c.summary).length,
@@ -169,131 +158,84 @@ const MedicalAnalyticsChat = ({
 
   if (!selectedPatientId) {
     return (
-      <div className="text-center py-8">
-        <div className="p-6 rounded-lg bg-muted/30">
-          <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium text-muted-foreground mb-2">
-            Análisis Médico con IA
-          </h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Selecciona un paciente para analizar su historial médico completo con inteligencia artificial.
-          </p>
-          <div className="text-xs text-muted-foreground bg-blue-50 p-3 rounded border space-y-2">
-            <div className="flex items-center gap-2">
-              <Database className="h-4 w-4" />
-              <span>Análisis automático de transcripciones y resúmenes médicos</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              <span>Capacidad de generar gráficos, diagramas y esquemas médicos</span>
-            </div>
-          </div>
+      <div className="flex flex-col items-center justify-center py-16 px-4">
+        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+          <Sparkles className="h-5 w-5 text-muted-foreground" />
         </div>
+        <h3 className="text-base font-medium text-foreground mb-1">
+          Análisis con IA
+        </h3>
+        <p className="text-sm text-muted-foreground text-center max-w-xs">
+          Selecciona un paciente para analizar su historial médico con inteligencia artificial.
+        </p>
       </div>
     );
   }
 
+  const hasData = patientStats && patientStats.totalConsultations > 0;
+
   return (
-    <div className="space-y-4">
-      {/* Patient Context & Configuration */}
-      <Card className="border-medical-200">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Bot className="h-5 w-5 text-medical-600" />
-              Análisis IA - Asistente Médico Visual
-              {patientStats && (
-                <span className="text-sm font-normal text-muted-foreground">
-                  ({patientStats.totalConsultations} consultas disponibles)
-                </span>
-              )}
-            </CardTitle>
-          </div>
-          
-          {patientStats && (
-            <div className="text-xs text-muted-foreground bg-green-50 p-3 rounded border flex items-center gap-4 flex-wrap">
-              <div>📊 {patientStats.consultationsWithSummary} resúmenes médicos</div>
-              <div>📝 {patientStats.consultationsWithTranscription} transcripciones</div>
-              <div>📅 Desde {patientStats.dateRange?.from ? new Date(patientStats.dateRange.from).toLocaleDateString('es-ES') : 'N/A'}</div>
-              <div className="flex items-center gap-1">
-                <BarChart3 className="h-3 w-3" />
-                <span>Gráficos y diagramas disponibles</span>
-              </div>
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="shrink-0 px-4 py-3 border-b border-border/60">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
             </div>
+            <div>
+              <h3 className="text-sm font-medium text-foreground leading-tight">Asistente IA</h3>
+              {patientStats && (
+                <p className="text-xs text-muted-foreground">
+                  {patientStats.totalConsultations} consulta{patientStats.totalConsultations !== 1 ? 's' : ''} disponible{patientStats.totalConsultations !== 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+          </div>
+          {messages.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearConversation}
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              Limpiar
+            </Button>
           )}
-        </CardHeader>
-        
-      </Card>
+        </div>
+      </div>
 
-      {/* Suggested Questions */}
-      <Card className="border-medical-200">
-        <CardContent className="p-4">
-          <h4 className="text-sm font-medium text-medical-700 mb-3 flex items-center gap-2">
-            💡 Preguntas inteligentes sugeridas:
-            {patientStats && patientStats.totalConsultations === 0 && (
-              <AlertCircle className="h-4 w-4 text-orange-500" />
-            )}
-            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-              Incluye gráficos y diagramas
-            </span>
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {suggestedQuestions.map((question, index) => (
-              <Button
-                key={index}
-                variant="outline"
-                size="sm"
-                className={`text-left h-auto p-3 text-xs border-medical-300 hover:bg-medical-50 whitespace-normal ${
-                  index >= 8 ? 'text-blue-600 border-blue-300 hover:bg-blue-50' : 'text-medical-600'
-                }`}
-                onClick={() => handleSendQuestion(question)}
-                disabled={isLoading || !patientStats || patientStats.totalConsultations === 0}
-              >
-                {index >= 8 && <BarChart3 className="h-3 w-3 mr-1 inline" />}
-                {question}
-              </Button>
-            ))}
-          </div>
-          
-          <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200">
-            <p className="text-xs text-blue-700">
-              <strong>💡 Nueva funcionalidad:</strong> La IA ahora puede crear gráficos, diagramas anatómicos, 
-              líneas de tiempo y esquemas médicos usando la sintaxis <code>```canvas</code>
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Chat Area */}
-      <Card className="border-medical-200 h-96">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Conversación con IA Médica</CardTitle>
-            {messages.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearConversation}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Limpiar
-              </Button>
-            )}
-          </div>
-          <Separator />
-        </CardHeader>
-        
-        <CardContent className="flex-1 p-4">
-          <ScrollArea className="h-64 pr-4">
+      {/* Chat messages */}
+      <div className="flex-1 min-h-0">
+        <ScrollArea className="h-full" ref={scrollRef}>
+          <div className="px-4 py-4">
             {messages.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Bot className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Haz una pregunta para comenzar el análisis médico inteligente.</p>
-                {patientStats && (
-                  <p className="text-xs mt-2 text-green-600">
-                    ✅ Datos listos: {patientStats.totalConsultations} consultas médicas disponibles
+              <div className="space-y-4">
+                {/* Empty state with suggestions */}
+                <div className="text-center py-6">
+                  <Bot className="h-6 w-6 mx-auto mb-2 text-muted-foreground/40" />
+                  <p className="text-xs text-muted-foreground">
+                    {hasData
+                      ? 'Hacé una pregunta o elegí una sugerencia'
+                      : 'Este paciente no tiene consultas registradas'
+                    }
                   </p>
+                </div>
+
+                {hasData && (
+                  <div className="space-y-1.5">
+                    {suggestedQuestions.map((question, index) => (
+                      <button
+                        key={index}
+                        className="w-full text-left px-3 py-2 text-xs text-muted-foreground rounded-lg border border-border/60 hover:border-primary/30 hover:bg-primary/5 hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        onClick={() => handleSendQuestion(question)}
+                        disabled={isLoading}
+                      >
+                        {question}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             ) : (
@@ -301,105 +243,94 @@ const MedicalAnalyticsChat = ({
                 {messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex gap-3 ${
+                    className={`flex gap-2.5 ${
                       message.type === 'user' ? 'flex-row-reverse' : 'flex-row'
                     }`}
                   >
-                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                      message.type === 'user' 
-                        ? 'bg-medical-500 text-white' 
-                        : 'bg-slate-100 text-slate-600'
+                    <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5 ${
+                      message.type === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground'
                     }`}>
                       {message.type === 'user' ? (
-                        <User className="h-4 w-4" />
+                        <User className="h-3 w-3" />
                       ) : (
-                        <Bot className="h-4 w-4" />
+                        <Bot className="h-3 w-3" />
                       )}
                     </div>
-                    <div className={`flex-1 max-w-[80%] ${
+                    <div className={`flex-1 max-w-[85%] ${
                       message.type === 'user' ? 'text-right' : 'text-left'
                     }`}>
-                      <div className={`inline-block p-3 rounded-lg ${
+                      <div className={`inline-block px-3 py-2 rounded-xl ${
                         message.type === 'user'
-                          ? 'bg-medical-500 text-white rounded-br-sm'
-                          : 'bg-slate-100 text-slate-900 rounded-bl-sm'
+                          ? 'bg-primary text-primary-foreground rounded-br-md'
+                          : 'bg-muted/60 text-foreground rounded-bl-md'
                       }`}>
                         {message.type === 'bot' ? (
-                          <MarkdownRenderer 
-                            content={message.content} 
+                          <MarkdownRenderer
+                            content={message.content}
                             className="text-sm"
                           />
                         ) : (
                           <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-[10px] text-muted-foreground/60 mt-0.5 px-1">
                         {formatTime(message.timestamp)}
                       </p>
                     </div>
                   </div>
                 ))}
-                
+
                 {isLoading && (
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
-                      <Bot className="h-4 w-4 text-slate-600" />
+                  <div className="flex gap-2.5">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-muted flex items-center justify-center mt-0.5">
+                      <Bot className="h-3 w-3 text-muted-foreground" />
                     </div>
-                    <div className="flex-1">
-                      <div className="inline-block p-3 bg-slate-100 rounded-lg rounded-bl-sm">
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                            <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                            <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
-                          </div>
-                          <span>Analizando con IA médica...</span>
-                        </div>
+                    <div className="inline-block px-3 py-2 bg-muted/60 rounded-xl rounded-bl-md">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span>Analizando...</span>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
             )}
-          </ScrollArea>
-        </CardContent>
-      </Card>
-
-      {/* Input Area */}
-      <Card className="border-medical-200">
-        <CardContent className="p-4">
-          <div className="flex gap-2">
-            <Input
-              value={currentQuestion}
-              onChange={(e) => setCurrentQuestion(e.target.value)}
-              placeholder="Pregunta sobre el historial médico del paciente (ahora con gráficos)..."
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && !isLoading) {
-                  handleSendQuestion();
-                }
-              }}
-              disabled={isLoading}
-              className="flex-1"
-            />
-            <Button
-              onClick={() => handleSendQuestion()}
-              disabled={!currentQuestion.trim() || isLoading || !patientStats || patientStats.totalConsultations === 0}
-              className="bg-medical-500 hover:bg-medical-600"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
           </div>
-          {patientStats && patientStats.totalConsultations === 0 && (
-            <p className="text-xs text-orange-600 mt-2">
-              ⚠️ Este paciente necesita consultas médicas registradas para poder analizar.
-            </p>
-          )}
-          <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-            <BarChart3 className="h-3 w-3" />
-            La IA puede generar gráficos médicos, diagramas anatómicos y líneas de tiempo automáticamente
+        </ScrollArea>
+      </div>
+
+      {/* Input */}
+      <div className="shrink-0 px-4 py-3 border-t border-border/60">
+        {!hasData && (
+          <p className="text-xs text-muted-foreground mb-2">
+            Este paciente necesita consultas registradas para analizar.
           </p>
-        </CardContent>
-      </Card>
+        )}
+        <div className="flex gap-2">
+          <Input
+            value={currentQuestion}
+            onChange={(e) => setCurrentQuestion(e.target.value)}
+            placeholder="Pregunta sobre el historial..."
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' && !isLoading) {
+                handleSendQuestion();
+              }
+            }}
+            disabled={isLoading || !hasData}
+            className="flex-1 h-9 text-sm bg-muted/30 border-border/60 placeholder:text-muted-foreground/50"
+          />
+          <Button
+            onClick={() => handleSendQuestion()}
+            disabled={!currentQuestion.trim() || isLoading || !hasData}
+            size="sm"
+            className="h-9 w-9 p-0 bg-primary hover:bg-primary/90"
+          >
+            <Send className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };
