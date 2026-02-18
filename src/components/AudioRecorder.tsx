@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, Square, Loader2, AlertTriangle, Save } from "lucide-react";
+import { Mic, Square, Loader2, AlertTriangle, Save, Upload } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +51,7 @@ const AudioRecorder = ({ preselectedPatient }: AudioRecorderProps) => {
   const backupTimerRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const mediaStreamCheckerRef = useRef<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { toast } = useToast();
 
   const MAX_RECORDING_TIME = 30 * 60;
@@ -613,6 +614,45 @@ const AudioRecorder = ({ preselectedPatient }: AudioRecorderProps) => {
     }
   };
 
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!patientName.trim()) {
+      toast({
+        title: "Nombre del paciente requerido",
+        description: "Por favor ingrese el nombre del paciente antes de subir audio",
+        variant: "destructive",
+      });
+      // Reset input so the same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // Auto-create patient if none selected
+    let overrides: { patientId?: string; isNewPatient?: boolean } | undefined;
+    if (!selectedPatient && patientName.trim()) {
+      try {
+        const result = await createPatientAction({ name: patientName.trim() });
+        if (result.id) {
+          overrides = { patientId: result.id, isNewPatient: true };
+        }
+      } catch (err) {
+        console.error('Error auto-creating patient:', err);
+      }
+    }
+
+    enqueueAudioForProcessing(file, overrides);
+
+    toast({
+      title: "Audio subido",
+      description: "Procesando en segundo plano",
+    });
+
+    resetRecorder();
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const resetRecorder = () => {
     setPatientName("");
     setSelectedPatient(null);
@@ -709,7 +749,7 @@ const AudioRecorder = ({ preselectedPatient }: AudioRecorderProps) => {
             </div>
           )}
 
-          <div className="flex justify-center pt-4">
+          <div className="flex justify-center gap-3 pt-4">
             {isRecording ? (
               <Button
                 onClick={stopRecording}
@@ -721,16 +761,34 @@ const AudioRecorder = ({ preselectedPatient }: AudioRecorderProps) => {
                 Detener Grabación
               </Button>
             ) : (
-              <Button
-                onClick={() => startRecording(false)}
-                variant="default"
-                size="lg"
-                disabled={!patientName.trim()}
-                className="w-full sm:w-auto"
-              >
-                <Mic className="mr-2 h-4 w-4" />
-                Iniciar Grabación
-              </Button>
+              <>
+                <Button
+                  onClick={() => startRecording(false)}
+                  variant="default"
+                  size="lg"
+                  disabled={!patientName.trim()}
+                  className="flex-1 sm:flex-initial"
+                >
+                  <Mic className="mr-2 h-4 w-4" />
+                  Iniciar Grabación
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  disabled={!patientName.trim()}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Subir Audio
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="audio/*"
+                  className="hidden"
+                  onChange={handleAudioUpload}
+                />
+              </>
             )}
           </div>
         </div>
