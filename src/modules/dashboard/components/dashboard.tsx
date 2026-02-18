@@ -40,7 +40,7 @@ export function Dashboard({ userEmail }: { userEmail: string }) {
 					<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 						<div className="flex items-center justify-between mb-6">
 							<div>
-								<h1 className="text-2xl font-bold text-foreground tracking-tight">
+								<h1 className="text-2xl font-extrabold text-foreground tracking-tight">
 									{activeTab === 'consultas' ? 'Consultas' : activeTab === 'pacientes' ? 'Pacientes' : 'Estadísticas'}
 								</h1>
 								<p className="text-sm text-muted-foreground mt-0.5">
@@ -51,24 +51,24 @@ export function Dashboard({ userEmail }: { userEmail: string }) {
 											: 'Análisis de datos clínicos'}
 								</p>
 							</div>
-							<TabsList className="bg-muted/60 border border-border/50 p-1 h-auto">
+							<TabsList className="bg-secondary/60 border border-border/50 p-1 h-auto">
 								<TabsTrigger
 									value="consultas"
-									className="flex items-center gap-1.5 px-3.5 py-2 text-sm data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md transition-all"
+									className="flex items-center gap-1.5 px-3.5 py-2 text-sm data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-wuru rounded-md transition-all"
 								>
 									<Mic className="h-3.5 w-3.5" />
 									<span className="hidden sm:inline">Consultas</span>
 								</TabsTrigger>
 								<TabsTrigger
 									value="pacientes"
-									className="flex items-center gap-1.5 px-3.5 py-2 text-sm data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md transition-all"
+									className="flex items-center gap-1.5 px-3.5 py-2 text-sm data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-wuru rounded-md transition-all"
 								>
 									<Users className="h-3.5 w-3.5" />
 									<span className="hidden sm:inline">Pacientes</span>
 								</TabsTrigger>
 								<TabsTrigger
 									value="estadisticas"
-									className="flex items-center gap-1.5 px-3.5 py-2 text-sm data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md transition-all"
+									className="flex items-center gap-1.5 px-3.5 py-2 text-sm data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-wuru rounded-md transition-all"
 								>
 									<BarChart3 className="h-3.5 w-3.5" />
 									<span className="hidden sm:inline">Estadísticas</span>
@@ -79,7 +79,7 @@ export function Dashboard({ userEmail }: { userEmail: string }) {
 						<TabsContent value="consultas" className="animate-fade-in mt-0">
 							<div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 								<div className="lg:col-span-2">
-									<div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+									<div className="rounded-2xl border border-border bg-card p-5 shadow-wuru hover:shadow-wuru-hover hover:-translate-y-1 transition-all duration-300">
 										<div className="flex items-center justify-between mb-4">
 											<div>
 												<h2 className="text-base font-semibold text-foreground">
@@ -117,7 +117,7 @@ export function Dashboard({ userEmail }: { userEmail: string }) {
 								</div>
 
 								<div className="lg:col-span-3">
-									<div className="rounded-xl border border-border bg-card p-5 shadow-sm h-full">
+									<div className="rounded-2xl border border-border bg-card p-5 shadow-wuru hover:shadow-wuru-hover hover:-translate-y-1 transition-all duration-300 h-full">
 										<div className="flex items-center justify-between mb-4">
 											<h2 className="text-base font-semibold text-foreground">
 												Análisis por Paciente
@@ -137,7 +137,7 @@ export function Dashboard({ userEmail }: { userEmail: string }) {
 						</TabsContent>
 
 						<TabsContent value="estadisticas" className="animate-fade-in mt-0">
-							<div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+							<div className="rounded-2xl border border-border bg-card p-5 shadow-wuru">
 								<ConsultationsList onConsultationSelect={handleConsultationSelect} />
 							</div>
 						</TabsContent>

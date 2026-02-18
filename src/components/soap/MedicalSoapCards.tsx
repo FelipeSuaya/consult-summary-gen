@@ -17,12 +17,12 @@ interface MedicalSoapCardsProps {
 }
 
 const SECTION_STYLES = {
-  subjective: { border: "border-l-blue-500", icon: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/20" },
-  objective: { border: "border-l-emerald-500", icon: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/20" },
-  assessment: { border: "border-l-amber-500", icon: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/20" },
-  plan: { border: "border-l-teal-500", icon: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950/20" },
-  diagnosis: { border: "border-l-purple-500", icon: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950/20" },
-  lab: { border: "border-l-slate-500", icon: "text-slate-600", bg: "bg-slate-50 dark:bg-slate-950/20" },
+  subjective: { border: "border-l-blue-500", icon: "text-blue-400", bg: "bg-blue-950/30" },
+  objective: { border: "border-l-emerald-500", icon: "text-emerald-400", bg: "bg-emerald-950/30" },
+  assessment: { border: "border-l-amber-500", icon: "text-amber-400", bg: "bg-amber-950/30" },
+  plan: { border: "border-l-teal-500", icon: "text-teal-400", bg: "bg-teal-950/30" },
+  diagnosis: { border: "border-l-purple-500", icon: "text-purple-400", bg: "bg-purple-950/30" },
+  lab: { border: "border-l-slate-400", icon: "text-slate-400", bg: "bg-slate-950/30" },
 } as const;
 
 function SectionCard({
@@ -97,7 +97,7 @@ const MedicalSoapCards = ({ soapData, className = "" }: MedicalSoapCardsProps) =
           {soapData.alerts.map((alert, i) => (
             <div
               key={i}
-              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800"
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-red-950/40 text-red-400 border border-red-800/50"
             >
               <AlertTriangle className="h-3 w-3 shrink-0" />
               {alert.message}
@@ -133,7 +133,7 @@ const MedicalSoapCards = ({ soapData, className = "" }: MedicalSoapCardsProps) =
                     key={i}
                     className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
                       vital.flagged
-                        ? 'bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400'
+                        ? 'bg-red-950/40 text-red-400'
                         : 'bg-muted text-foreground/70'
                     }`}
                   >

@@ -70,7 +70,7 @@ export function AuthForm() {
 	}
 
 	return (
-		<Card className="shadow-lg border-border/60">
+		<Card className="shadow-wuru border-border/40 bg-card">
 			<CardHeader className="pb-4">
 				<CardTitle className="text-xl">Acceso Profesional</CardTitle>
 				<CardDescription>

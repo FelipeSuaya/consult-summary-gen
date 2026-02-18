@@ -11,10 +11,10 @@ export function Header() {
 	const { user } = useAuth()
 
 	return (
-		<header className="sticky top-0 z-50 border-b border-border/60 bg-card/80 backdrop-blur-xl">
+		<header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-md">
 			<div className="container flex h-14 items-center justify-between">
 				<Link href="/" className="flex items-center gap-2.5 group">
-					<div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground shadow-sm">
+					<div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground shadow-wuru">
 						<Activity className="h-4 w-4" strokeWidth={2.5} />
 					</div>
 					<span className="text-base font-bold tracking-tight text-foreground">
