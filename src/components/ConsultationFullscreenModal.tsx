@@ -112,12 +112,12 @@ const ConsultationFullscreenModal = ({
         style={{ margin: 0 }}
       >
         {/* Header con controles */}
-        <div className="flex items-center justify-between p-4 border-b bg-white sticky top-0 z-10 print:hidden">
+        <div className="flex items-center justify-between p-4 border-b border-border bg-card sticky top-0 z-10 print:hidden">
           <div className="flex items-center gap-4">
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-xl font-semibold text-foreground">
               Consulta - {format(new Date(consultation.dateTime), "PPP", { locale: es })}
             </h2>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-muted-foreground">
               {format(new Date(consultation.dateTime), "p", { locale: es })}
             </div>
           </div>
@@ -153,8 +153,8 @@ const ConsultationFullscreenModal = ({
         </div>
 
         {/* Contenido principal */}
-        <div className="flex-1 overflow-y-auto bg-gray-50">
-          <div id="consultation-print-content" className="max-w-4xl mx-auto p-6 bg-white min-h-full">
+        <div className="flex-1 overflow-y-auto bg-background">
+          <div id="consultation-print-content" className="max-w-4xl mx-auto p-6 bg-card min-h-full print:bg-white">
             {/* Header de impresión */}
             <PrintHeader
               patientName={patientName}
@@ -168,10 +168,10 @@ const ConsultationFullscreenModal = ({
             {/* Audio si existe */}
             {consultation.audioUrl && (
               <div className="mb-6 print:hidden">
-                <h4 className="font-medium mb-2 text-gray-900 flex items-center gap-2">
+                <h4 className="font-medium mb-2 text-foreground flex items-center gap-2">
                   Audio de la consulta:
                 </h4>
-                <div className="bg-gray-50 p-3 rounded-md border border-gray-100">
+                <div className="bg-muted/30 p-3 rounded-md border border-border">
                   <audio controls className="w-full">
                     <source src={consultation.audioUrl} type="audio/webm" />
                     Su navegador no soporta el elemento de audio.

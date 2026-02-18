@@ -85,18 +85,18 @@ const renderMarkdownTable = (markdownTable: string) => {
     // Cuando es tabla de laboratorio, analizar filas
     if (isLabTable) {
       return (
-        <Table className="mt-2 mb-4 border border-gray-200">
-          <TableHeader className="bg-medical-50">
+        <Table className="mt-2 mb-4 border border-border">
+          <TableHeader className="bg-muted/30">
             <TableRow>
-              <TableHead className="font-medium text-medical-800">Estudio</TableHead>
-              <TableHead className="font-medium text-medical-800">Resultado</TableHead>
+              <TableHead className="font-medium text-foreground">Estudio</TableHead>
+              <TableHead className="font-medium text-foreground">Resultado</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {dataRows.map((rowArr, idx) => {
               const { estudio, resultado } = getLabRowData(rowArr);
               return (
-                <TableRow key={`lab-row-${idx}`} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                <TableRow key={`lab-row-${idx}`} className={idx % 2 === 0 ? "bg-card" : "bg-muted/30"}>
                   <TableCell>{estudio || "-"}</TableCell>
                   <TableCell>{resultado || "-"}</TableCell>
                 </TableRow>
@@ -116,17 +116,17 @@ const renderMarkdownTable = (markdownTable: string) => {
     const dataRowsGeneric = dataRows;
 
     return (
-      <Table className="mt-2 mb-4 border border-gray-200">
-        <TableHeader className="bg-medical-50">
+      <Table className="mt-2 mb-4 border border-border">
+        <TableHeader className="bg-muted/30">
           <TableRow>
             {headers.map((header, i) => (
-              <TableHead key={`header-${i}`} className="font-medium text-medical-800">{header}</TableHead>
+              <TableHead key={`header-${i}`} className="font-medium text-foreground">{header}</TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
           {dataRowsGeneric.map((row, rowIndex) => (
-            <TableRow key={`row-${rowIndex}`} className={rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+            <TableRow key={`row-${rowIndex}`} className={rowIndex % 2 === 0 ? "bg-card" : "bg-muted/30"}>
               {row.map((cell, cellIndex) => (
                 <TableCell key={`cell-${rowIndex}-${cellIndex}`}>{cell}</TableCell>
               ))}
@@ -206,11 +206,11 @@ const processTextWithTables = (text: string) => {
         
         result.push(
           <div key={`section-${i}`} className="mb-4">
-            <div className="mb-2 flex items-center gap-2 bg-medical-100/50 p-2 rounded-md">
-              <div className="p-1.5 rounded-full bg-medical-200/70">
+            <div className="mb-2 flex items-center gap-2 bg-muted/20 p-2 rounded-md">
+              <div className="p-1.5 rounded-full bg-primary/20">
                 {icon}
               </div>
-              <h3 className="font-semibold text-medical-800">{sectionTitle}</h3>
+              <h3 className="font-semibold text-foreground">{sectionTitle}</h3>
             </div>
             <div className="pl-2">
               {contentParts.map((textPart, j) => (
@@ -225,11 +225,11 @@ const processTextWithTables = (text: string) => {
       } else {
         result.push(
           <div key={`section-${i}`} className="mb-4">
-            <div className="mb-2 flex items-center gap-2 bg-medical-100/50 p-2 rounded-md">
-              <div className="p-1.5 rounded-full bg-medical-200/70">
+            <div className="mb-2 flex items-center gap-2 bg-muted/20 p-2 rounded-md">
+              <div className="p-1.5 rounded-full bg-primary/20">
                 {icon}
               </div>
-              <h3 className="font-semibold text-medical-800">{sectionTitle}</h3>
+              <h3 className="font-semibold text-foreground">{sectionTitle}</h3>
             </div>
             <div className="pl-2 whitespace-pre-line">{sectionContent}</div>
           </div>
@@ -307,48 +307,48 @@ const PatientConsultations = ({
   };
 
   if (isLoading) {
-    return <div className="text-center py-6 bg-gray-50 rounded-lg animate-pulse">
-      <div className="inline-block p-3 rounded-full bg-medical-100">
-        <Clock className="h-5 w-5 text-medical-500" />
+    return <div className="text-center py-6 bg-muted/30 rounded-lg animate-pulse">
+      <div className="inline-block p-3 rounded-full bg-primary/20">
+        <Clock className="h-5 w-5 text-primary" />
       </div>
-      <p className="mt-2 text-medical-600">Cargando historial de consultas...</p>
+      <p className="mt-2 text-muted-foreground">Cargando historial de consultas...</p>
     </div>;
   }
 
   if (error) {
     console.error("Error fetching consultations:", error);
-    return <div className="text-center py-6 bg-red-50 rounded-lg border border-red-100">
-      <p className="text-red-600">Error al cargar historial: {String(error)}</p>
+    return <div className="text-center py-6 bg-destructive/10 rounded-lg border border-destructive/30">
+      <p className="text-destructive">Error al cargar historial: {String(error)}</p>
     </div>;
   }
 
   if (consultations.length === 0) {
-    return <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-      <FileText className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-      <p className="text-gray-500">No hay consultas registradas para este paciente.</p>
+    return <div className="text-center py-8 bg-muted/30 rounded-lg border border-dashed border-border">
+      <FileText className="h-8 w-8 mx-auto text-muted-foreground/60 mb-2" />
+      <p className="text-muted-foreground">No hay consultas registradas para este paciente.</p>
     </div>;
   }
 
   return <div className="space-y-4">
-      <h3 className="text-lg font-medium text-cyan-900 flex items-center gap-2">
-        <HeartPulse className="h-5 w-5 text-cyan-700" />
+      <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
+        <HeartPulse className="h-5 w-5 text-primary" />
         Historial de Consultas
       </h3>
       
       <Accordion type="single" collapsible className="w-full">
         {consultations.map(consultation => <AccordionItem key={consultation.id} value={consultation.id} className="mb-3 border-none">
-            <AccordionTrigger className="px-4 py-3 rounded-md bg-gradient-to-r from-cyan-800 to-cyan-900 hover:from-cyan-700 hover:to-cyan-800 shadow-sm transition-all">
+            <AccordionTrigger className="px-4 py-3 rounded-md bg-primary/80 hover:bg-primary/90 shadow-sm transition-all">
               <div className="flex items-center gap-3 text-left">
-                <div className="p-1.5 rounded-full bg-white/20">
-                  <Calendar className="h-4 w-4 text-cyan-50" />
+                <div className="p-1.5 rounded-full bg-card/20">
+                  <Calendar className="h-4 w-4 text-primary-foreground" />
                 </div>
                 <div>
-                  <span className="font-medium text-slate-50">
+                  <span className="font-medium text-primary-foreground">
                     {format(new Date(consultation.dateTime), "PPP", {
                   locale: es
                 })}
                   </span>
-                  <span className="text-sm ml-2 text-slate-50/80">
+                  <span className="text-sm ml-2 text-primary-foreground/80">
                     {format(new Date(consultation.dateTime), "p", {
                   locale: es
                 })}
@@ -356,21 +356,21 @@ const PatientConsultations = ({
                 </div>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-4 pt-3 pb-4 mt-2 bg-white rounded-md shadow-sm border border-gray-100">
+            <AccordionContent className="px-4 pt-3 pb-4 mt-2 bg-card rounded-md shadow-sm border border-border/50">
               <div className="space-y-3">
                 {consultation.summary ? <>
                     <div className="flex items-start gap-2">
-                      <FileText className="h-4 w-4 mt-1 text-cyan-600" />
+                      <FileText className="h-4 w-4 mt-1 text-primary" />
                       <div className="flex-1">
                         <div className="flex justify-between items-start">
-                          <h4 className="font-medium mb-1 text-cyan-900">Resumen:</h4>
-                          {editMode !== consultation.id && <Button variant="ghost" size="sm" onClick={() => handleEditSummary(consultation)} className="h-7 px-2 text-cyan-50 bg-cyan-700 hover:bg-cyan-600 shadow-sm">
+                          <h4 className="font-medium mb-1 text-foreground">Resumen:</h4>
+                          {editMode !== consultation.id && <Button variant="ghost" size="sm" onClick={() => handleEditSummary(consultation)} className="h-7 px-2 text-primary-foreground bg-primary hover:bg-primary/80 shadow-sm">
                               <PencilLine className="h-3.5 w-3.5" />
-                              <span className="ml-1 text-xs text-slate-50">Editar</span>
+                              <span className="ml-1 text-xs text-primary-foreground">Editar</span>
                             </Button>}
                         </div>
                         
-                        <p className="text-sm whitespace-pre-line line-clamp-3 text-cyan-900 bg-cyan-50/50 p-2 rounded-md">
+                        <p className="text-sm whitespace-pre-line line-clamp-3 text-foreground bg-muted/20 p-2 rounded-md">
                           {consultation.summary}
                         </p>
                       </div>
@@ -379,7 +379,7 @@ const PatientConsultations = ({
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="mt-2 border-cyan-200 text-cyan-700 hover:bg-cyan-50" 
+                      className="mt-2 border-border text-primary hover:bg-muted/30" 
                       onClick={() => {
                         setSelectedConsultation(consultation);
                         setShowFullscreenModal(true);
@@ -387,7 +387,7 @@ const PatientConsultations = ({
                     >
                       Ver consulta completa
                     </Button>
-                  </> : <p className="text-sm text-gray-500 italic bg-gray-50 p-3 rounded-md border border-dashed border-gray-200">No hay resumen disponible para esta consulta.</p>}
+                  </> : <p className="text-sm text-muted-foreground italic bg-muted/30 p-3 rounded-md border border-dashed border-border">No hay resumen disponible para esta consulta.</p>}
               </div>
             </AccordionContent>
           </AccordionItem>)}
@@ -400,8 +400,8 @@ const PatientConsultations = ({
           aria-describedby="consultation-edit"
         >
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-cyan-900">
-              <PencilLine className="h-5 w-5 text-cyan-700" />
+            <DialogTitle className="flex items-center gap-2 text-foreground">
+              <PencilLine className="h-5 w-5 text-primary" />
               Editar Resumen - {selectedConsultation && format(new Date(selectedConsultation.dateTime), "PPP", {
               locale: es
             })}
@@ -410,11 +410,11 @@ const PatientConsultations = ({
           
           <div className="space-y-4 my-4" id="consultation-edit">
             {selectedConsultation?.audioUrl && <div>
-                <h4 className="font-medium mb-2 text-cyan-900 flex items-center gap-2">
-                  <HeartPulse className="h-4 w-4 text-cyan-700" />
+                <h4 className="font-medium mb-2 text-foreground flex items-center gap-2">
+                  <HeartPulse className="h-4 w-4 text-primary" />
                   Audio de la consulta:
                 </h4>
-                <div className="bg-gray-50 p-3 rounded-md border border-gray-100">
+                <div className="bg-muted/30 p-3 rounded-md border border-border/50">
                   <audio controls className="w-full">
                     <source src={selectedConsultation.audioUrl} type="audio/webm" />
                     Su navegador no soporta el elemento de audio.
@@ -423,30 +423,30 @@ const PatientConsultations = ({
               </div>}
             
             <div>
-              <h4 className="font-medium mb-2 text-cyan-900 flex items-center gap-2">
-                <FileText className="h-4 w-4 text-cyan-700" />
+              <h4 className="font-medium mb-2 text-foreground flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
                 Resumen:
               </h4>
-              <Textarea value={editedSummary} onChange={e => setEditedSummary(e.target.value)} className="min-h-[300px] text-sm font-mono border-cyan-200 focus-visible:ring-cyan-500" placeholder="Edite el resumen aquí..." />
+              <Textarea value={editedSummary} onChange={e => setEditedSummary(e.target.value)} className="min-h-[300px] text-sm font-mono border-border focus-visible:ring-primary" placeholder="Edite el resumen aquí..." />
             </div>
             
             {selectedConsultation?.transcription && <div>
-                <h4 className="font-medium mb-2 text-cyan-900 flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-cyan-700" />
+                <h4 className="font-medium mb-2 text-foreground flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-primary" />
                   Transcripción completa:
                 </h4>
-                <div className="bg-gray-50 p-4 rounded-md whitespace-pre-line text-sm text-gray-700 max-h-[400px] overflow-y-auto border border-gray-200">
+                <div className="bg-muted/30 p-4 rounded-md whitespace-pre-line text-sm text-foreground/70 max-h-[400px] overflow-y-auto border border-border">
                   {selectedConsultation.transcription}
                 </div>
               </div>}
           </div>
           
           <div className="flex justify-end gap-2 mt-6">
-            <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving} className="h-10 border-red-200 text-red-600 hover:bg-red-50">
+            <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving} className="h-10 border-destructive/30 text-destructive hover:bg-destructive/20">
               <X className="h-4 w-4 mr-2" />
               Cancelar
             </Button>
-            <Button variant="default" onClick={() => selectedConsultation && handleSaveSummary(selectedConsultation)} disabled={isSaving} className="h-10 bg-cyan-700 hover:bg-cyan-600">
+            <Button variant="default" onClick={() => selectedConsultation && handleSaveSummary(selectedConsultation)} disabled={isSaving} className="h-10 bg-primary hover:bg-primary/80">
               <Save className="h-4 w-4 mr-2" />
               {isSaving ? "Guardando..." : "Guardar cambios"}
             </Button>
